@@ -786,7 +786,6 @@
         document.getElementById('btn-abrir-modal-perfil').addEventListener('click', () => { document.getElementById('perfil-foto-url').value = session.foto_perfil || ''; document.getElementById('modal-perfil').style.display = 'flex'; });
         document.getElementById('btn-abrir-modal-topico').addEventListener('click', () => { document.getElementById('form-add-topico').reset(); document.getElementById('modal-topico-forum').style.display = 'flex'; });
         document.getElementById('btn-abrir-modal-modulo').addEventListener('click', () => { document.getElementById('form-add-modulo').reset(); document.getElementById('mod-id').value = ''; document.getElementById('titulo-modal-modulo').textContent = 'Novo Módulo'; document.getElementById('modal-modulo').style.display = 'flex'; });
-        document.getElementById('btn-editar-modulo').addEventListener('click', () => { document.getElementById('mod-id').value = currentContext.modulo_id; document.getElementById('mod-nome').value = currentContext.modulo_nome; document.getElementById('mod-desc').value = currentContext.modulo_desc; document.getElementById('mod-oculto').value = currentContext.modulo_oculto; document.getElementById('titulo-modal-modulo').textContent = 'Editar Módulo'; document.getElementById('modal-modulo').style.display = 'flex'; });
         
         document.getElementById('btn-abrir-modal-aula').addEventListener('click', () => { 
             document.getElementById('form-add-aula').reset(); 
@@ -794,6 +793,14 @@
             document.getElementById('aula-anexo').value = '';
             document.getElementById('titulo-modal-aula').textContent = 'Nova Aula'; 
             document.getElementById('modal-aula').style.display = 'flex'; 
+        });
+
+        // CORREÇÃO: Listener para abrir o modal de nova pergunta do Quiz
+        document.getElementById('btn-abrir-modal-pergunta').addEventListener('click', () => { 
+            document.getElementById('form-pergunta-quiz').reset(); 
+            document.getElementById('perg-id').value = ''; 
+            document.getElementById('titulo-modal-pergunta').textContent = 'Nova Pergunta'; 
+            document.getElementById('modal-pergunta-quiz').style.display = 'flex'; 
         });
 
         document.getElementById('btn-deletar-modulo').addEventListener('click', () => {
