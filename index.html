@@ -1,0 +1,1019 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Monitorando</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23ec4899'/><path d='M30 50 L45 65 L70 35' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        (function() {
+            var t = { nome: 'rosa', primary: '#ec4899', dark: '#be185d', glow: 'rgba(236, 72, 153, 0.35)' };
+            window.__temaAtual = t;
+            var root = document.documentElement.style;
+            root.setProperty('--primary-color', t.primary);
+            root.setProperty('--primary-gradient', 'linear-gradient(135deg, ' + t.primary + ' 0%, ' + t.dark + ' 100%)');
+            root.setProperty('--accent-glow', t.glow);
+        })();
+    </script>
+    <style>
+        :root {
+            --bg-color: #0c0d10; --container-bg: #14161d; --container-card: #1a1d26;
+            --text-main: #f9fafb; --text-muted: #9ca3af; --primary-color: #ec4899;
+            --primary-gradient: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+            --accent-glow: rgba(236, 72, 153, 0.35); --input-border: #282c38; --input-bg: #101217;
+            --shadow: rgba(0, 0, 0, 0.6); --tab-bg: #101217; --sidebar-bg: #101217;
+            --danger-color: #ef4444; --success-color: #10b981;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: #282c38; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #0c0d10; color: var(--text-main); min-height: 100vh; 
+            display: flex; justify-content: center; align-items: center; overflow-x: hidden; position: relative;
+        }
+
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; opacity: 0.35; display: block; }
+        .auth-wrapper { width: 100%; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; position: relative; z-index: 1; }
+        .auth-container { background-color: var(--container-bg); border-radius: 20px; box-shadow: 0 0 30px rgba(236, 72, 153, 0.2); width: 100%; max-width: 420px; overflow: hidden; position: relative; border: 1px solid rgba(236, 72, 153, 0.3); z-index: 1; padding: 10px; }
+        
+        .tabs-wrapper { background-color: var(--tab-bg); padding: 6px; border-radius: 14px; margin: 20px 20px 0 20px; border: 1px solid var(--input-border); }
+        .tabs { display: flex; width: 100%; gap: 6px; }
+        .tab-btn { flex: 1; padding: 12px 0; border: none; background: transparent; font-size: 14px; font-weight: 700; color: var(--text-muted); cursor: pointer; border-radius: 10px; transition: background 0.2s ease, color 0.2s ease; display: flex; align-items: center; justify-content: center; }
+        .tab-btn.active { color: #ffffff; background: var(--primary-gradient); }
+        
+        .form-area { padding: 30px 25px 25px 25px; }
+        .header { text-align: center; margin-bottom: 28px; }
+        .header h1 { font-size: 26px; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; }
+        .header p { font-size: 14px; color: var(--text-muted); margin-top: 6px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; font-size: 12px; font-weight: 700; margin-bottom: 8px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.8px; }
+        .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--input-border); border-radius: 10px; background-color: var(--input-bg); color: var(--text-main); font-size: 14px; outline: none; font-family: inherit; }
+        .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary-color); }
+        
+        .btn-submit { width: 100%; padding: 14px; background: var(--primary-gradient); color: #ffffff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.2s ease; }
+        .btn-submit:hover { opacity: 0.9; }
+        .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
+        .btn-submit.btn-danger { background: var(--danger-color); }
+        .status-message { margin-top: 15px; text-align: center; font-size: 14px; font-weight: 600; display: none; }
+
+        .mobile-presencial-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(12,13,16,0.95); z-index: 9999; display: none; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; }
+        .mobile-presencial-card { background: var(--container-bg); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 24px; padding: 35px 25px; width: 100%; max-width: 400px; position: relative; }
+        .link-discreto { color: var(--text-muted); font-size: 13px; text-align: center; display: block; margin-top: 20px; text-decoration: underline; cursor: pointer; }
+
+        .dashboard-wrapper { display: none; width: 100%; min-height: 100vh; flex-direction: column; position: relative; z-index: 1; }
+        .topbar { width: 100%; height: 70px; background-color: #14161d; border-bottom: 1px solid var(--input-border); display: flex; justify-content: space-between; align-items: center; padding: 0 35px; position: fixed; top: 0; z-index: 100; }
+        .topbar-brand { font-size: 22px; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+        
+        .nav-menu { display: flex; gap: 28px; align-items: center; height: 100%; }
+        .nav-link { position: relative; display: flex; align-items: center; padding: 10px 0; border: none; background: transparent; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; height: 100%; }
+        .nav-link:hover { color: var(--text-main); } .nav-link.active { color: #ffffff; }
+        .nav-link.active::after { content: ''; position: absolute; bottom: 0; left: 0; width: 100%; height: 3px; background: var(--primary-gradient); border-radius: 3px 3px 0 0; }
+
+        .user-controls { display: flex; align-items: center; gap: 14px; position: relative; }
+        .user-profile-badge { display: flex; align-items: center; gap: 10px; cursor: pointer; }
+        .user-avatar-header { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; border: 2px solid var(--primary-color); background-color: var(--input-bg); }
+        .user-name { font-weight: 600; font-size: 14px; color: var(--text-main); }
+        
+        .notification-container { position: relative; }
+        .notification-icon-wrapper { position: relative; cursor: pointer; display: flex; align-items: center; justify-content: center; width: 38px; height: 38px; border-radius: 50%; background: var(--input-bg); border: 1px solid var(--input-border); color: var(--text-muted); }
+        .notification-badge-dot { position: absolute; top: 6px; right: 6px; width: 8px; height: 8px; background-color: var(--danger-color); border-radius: 50%; display: none; }
+        .notification-dropdown { position: absolute; top: 48px; right: 0; width: 320px; background: var(--container-bg); border: 1px solid var(--input-border); border-radius: 12px; display: none; z-index: 1100; overflow: hidden; }
+        .notification-header { padding: 14px 18px; border-bottom: 1px solid var(--input-border); font-size: 12px; font-weight: 700; color: var(--primary-color); text-transform: uppercase; letter-spacing: 0.5px; }
+        .notification-list { max-height: 250px; overflow-y: auto; }
+        .notification-item { padding: 12px 18px; border-bottom: 1px solid var(--input-border); font-size: 13px; color: var(--text-main); line-height: 1.4; }
+        .notification-item span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
+        .notification-empty { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
+
+        .btn-action-small { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-action-small:hover { background: var(--primary-color); color: #fff; }
+        .btn-action-small.btn-danger { border-color: var(--danger-color); color: var(--danger-color); }
+        .btn-action-small.btn-danger:hover { background-color: var(--danger-color); color: #ffffff; }
+        
+        .dashboard-layout { display: flex; width: 100%; margin-top: 70px; min-height: calc(100vh - 70px); }
+        .sidebar { width: 320px; background-color: var(--sidebar-bg); border-right: 1px solid var(--input-border); padding: 25px; overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .sidebar h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
+        .module-list { list-style: none; flex: 1; }
+        .module-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; margin-bottom: 10px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-main); background-color: var(--container-bg); border: 1px solid transparent; }
+        .module-item:hover { border-color: var(--input-border); background-color: var(--container-card); }
+        .module-item.active { background-color: var(--container-card); border-color: var(--primary-color); color: var(--primary-color); }
+        
+        .btn-admin { background: var(--primary-gradient); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; }
+        .btn-text-action { background: none; border: 1px solid var(--input-border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-left: 6px; }
+        .btn-text-action:hover { border-color: var(--primary-color); color: var(--primary-color); }
+        .btn-text-action.danger:hover { border-color: var(--danger-color); color: var(--danger-color); }
+
+        .modal-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); display: none; justify-content: center; align-items: center; z-index: 1000; padding: 20px; }
+        .modal-content { background: var(--container-bg); padding: 35px; border-radius: 16px; width: 100%; max-width: 500px; position: relative; border: 1px solid var(--input-border); max-height: 90vh; overflow-y: auto; }
+        .close-modal { position: absolute; top: 18px; right: 22px; font-size: 22px; cursor: pointer; color: var(--text-muted); }
+
+        .toast-notification { position: fixed; bottom: 30px; right: 30px; background: var(--container-bg); border-left: 4px solid var(--primary-color); padding: 16px 28px; border-radius: 10px; z-index: 2000; font-size: 14px; font-weight: 600; display: none; border: 1px solid var(--input-border); }
+        .toast-notification.show { display:block; }
+        .toast-notification.error { border-left-color: var(--danger-color); }
+
+        .solicitacao-card { background: var(--container-card); border-radius: 14px; border: 1px solid var(--input-border); padding: 22px; margin-bottom: 20px; display: flex; justify-content: space-between; align-items: center; gap: 20px; }
+        .solicitacao-info h3 { font-size: 18px; font-weight: 700; color: var(--text-main); margin-bottom: 6px; }
+        .solicitacao-info p { font-size: 14px; color: var(--text-muted); line-height: 1.5; }
+        .solicitacao-actions { display: flex; gap: 12px; flex-shrink: 0; }
+        .btn-aprovar { background-color: var(--success-color); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+        .btn-negar { background-color: var(--danger-color); color: white; border: none; padding: 10px 18px; border-radius: 8px; font-weight: 600; cursor: pointer; }
+
+        .content-area { flex: 1; padding: 45px; overflow-y: auto; }
+        .content-header { margin-bottom: 30px; display: flex; justify-content: space-between; align-items: flex-start;}
+        .content-header h1 { font-size: 30px; font-weight: 800; margin-bottom: 8px; letter-spacing: -0.5px;}
+        .btn-voltar { background: none; border: none; color: var(--text-muted); cursor: pointer; font-weight: 600; margin-bottom: 25px; font-size: 14px; }
+        
+        .aulas-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 16px; margin-top: 20px; }
+        .aula-card { background: var(--container-card); border-radius: 14px; padding: 0; cursor: pointer; border: 1px solid var(--input-border); position: relative; display: flex; flex-direction: column; overflow: hidden; }
+        .aula-card:hover { border-color: var(--primary-color); }
+        .aula-card.locked { opacity: 0.5; cursor: not-allowed; filter: grayscale(0.85); }
+        
+        .aula-card-thumb { width: 100%; height: 115px; background: #101217; display: flex; align-items: center; justify-content: center; position: relative; border-bottom: 1px solid var(--input-border); background-size: cover; background-position: center; }
+        .aula-card-play-icon { width: 36px; height: 36px; border-radius: 50%; background: var(--primary-gradient); color: white; display: flex; align-items: center; justify-content: center; font-size: 13px; }
+        .aula-card-lock-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(16, 18, 23, 0.85); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 15px; border: 1px solid var(--input-border); }
+        .aula-badge-concluida { position: absolute; top: 8px; left: 8px; background: var(--success-color); color: #ffffff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; }
+
+        /* ESTILO EXCLUSIVO E AJUSTADO PARA CAPAS DE FILMES */
+        #sec-filmes .aulas-grid {
+            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+            gap: 20px;
+        }
+        #sec-filmes .aula-card-thumb {
+            height: 260px;
+            background-size: cover;
+            background-position: center;
+            background-repeat: no-repeat;
+        }
+        #sec-filmes .aula-card-body {
+            padding: 14px;
+            text-align: center;
+        }
+        #sec-filmes .aula-card-body h4 {
+            font-size: 15px;
+            font-weight: 700;
+        }
+
+        .aula-card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
+        .aula-card h4 { margin-bottom: 4px; color: var(--text-main); font-size: 14px; font-weight: 700; line-height: 1.3; }
+        .aula-card p { font-size: 12px; color: var(--text-muted); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4; }
+        .aula-actions { position: absolute; top: 10px; right: 10px; display: none; background: #101217; padding: 4px; border-radius: 8px; border: 1px solid var(--input-border); z-index: 5; }
+        .aula-card:hover .aula-actions { display: flex; gap: 4px; }
+
+        .video-container { width: 100%; max-width: 950px; aspect-ratio: 16/9; background-color: #000; border-radius: 16px; overflow: hidden; margin-bottom: 30px; border: 1px solid var(--input-border); }
+        .video-container iframe { width: 100%; height: 100%; border: none; }
+        .description-box { background-color: var(--container-bg); padding: 30px; border-radius: 16px; border: 1px solid var(--input-border); margin-bottom: 30px; max-width: 950px; }
+        
+        .btn-concluir { background: var(--success-color); color: white; border: none; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; }
+        .btn-concluir.concluida { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success-color); color: var(--success-color); }
+
+        .forum-topico-card { background: var(--container-card); border-radius: 14px; padding: 24px; border: 1px solid var(--input-border); margin-bottom: 20px; position: relative; }
+        .forum-topico-card:hover { border-color: var(--primary-color); }
+        .forum-topico-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
+        .forum-topico-title { font-size: 18px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
+        .forum-topico-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
+        .forum-topico-texto { font-size: 14px; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; margin-bottom: 15px; }
+
+        .monitor-card { background: var(--container-card); border-radius: 16px; border: 1px solid var(--input-border); padding: 28px; margin-bottom: 30px; }
+        .monitor-card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 18px; border-bottom: 1px solid var(--input-border); padding-bottom: 16px; }
+        .monitor-nome { font-size: 20px; font-weight: 700; color: var(--primary-color); }
+
+        .schedule-table-wrapper { width: 100%; overflow-x: auto; border-radius: 12px; border: 1px solid var(--input-border); background-color: var(--input-bg); }
+        .schedule-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 13px; }
+        .schedule-table th { background-color: var(--container-bg); color: var(--primary-color); padding: 14px 10px; font-weight: 700; border-bottom: 1px solid var(--input-border); }
+        .schedule-table td { padding: 16px 12px; border: 1px solid var(--input-border); color: var(--text-main); font-weight: 500; line-height: 1.4; }
+
+        .comments-section { max-width: 950px; background-color: var(--container-bg); padding: 35px; border-radius: 16px; border: 1px solid var(--input-border); }
+        .comments-list { display: flex; flex-direction: column; gap: 16px; margin-bottom: 30px; max-height: 400px; overflow-y: auto; }
+        .comment-item { display: flex; gap: 16px; padding: 18px; background-color: var(--input-bg); border-radius: 12px; border: 1px solid var(--input-border); }
+        .comment-content { flex: 1; }
+        .comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+        .comment-name { font-weight: 700; font-size: 15px; color: var(--primary-color); }
+        .comment-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
+        .link-destaque { color: var(--primary-color); text-decoration: none; font-weight: 600; }
+        .link-destaque:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="mobile-presencial-overlay" id="mobile-presencial-overlay">
+        <div class="mobile-presencial-card" id="step-1-presenca">
+            <div class="header">
+                <h1 style="font-size: 24px;">Registro de Presença</h1>
+                <p>Preencha os dados para solicitar seu atendimento</p>
+            </div>
+            <form id="form-presencial">
+                <div class="form-group"><label>Monitor Presente</label><select id="presencial-monitor" required><option value="" disabled selected>Carregando monitores...</option></select></div>
+                <div class="form-group"><label>Matrícula (11 a 12 dígitos)</label><input type="text" inputmode="numeric" pattern="\d{11,12}" title="Digite apenas números, de 11 a 12 dígitos" maxlength="12" id="presencial-matricula" required placeholder="Ex: 20261020301"></div>
+                <div class="form-group"><label>Nome Completo</label><input type="text" id="presencial-nome" required placeholder="Seu nome completo"></div>
+                <div class="form-group">
+                    <label>Curso</label>
+                    <select id="presencial-curso" required>
+                        <option value="" disabled selected>Selecione seu curso...</option>
+                        <option value="Mecatrônica Técnico Integrado">Mecatrônica Técnico Integrado</option>
+                        <option value="Mecatrônica Engenharia">Mecatrônica Engenharia</option>
+                        <option value="Eletrotécnica Técnico Subsequente">Eletrotécnica Técnico Subsequente</option>
+                        <option value="Edificações Técnico Integrado">Edificações Técnico Integrado</option>
+                        <option value="Edificações Técnico Subsequente">Edificações Técnico Subsequente</option>
+                        <option value="Química Técnico Integrado">Química Técnico Integrado</option>
+                        <option value="Engenharia Civil">Engenharia Civil</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Ano / Fase</label><input type="text" id="presencial-fase" required placeholder="Ex: 1º Ano ou 3ª Fase"></div>
+                <button type="submit" class="btn-submit" id="btn-submit-presencial">Confirmar Presença</button>
+            </form>
+            <a class="link-discreto" onclick="fecharPresencialEIrParaLogin()">Já tenho conta / Acessar Plataforma</a>
+        </div>
+
+        <div class="mobile-presencial-card" id="step-2-cadastro" style="display: none; text-align: center;">
+            <div class="aula-card-play-icon" style="width: 60px; height: 60px; margin: 0 auto 20px auto; font-size: 28px; background: var(--success-color);">✓</div>
+            <h2 style="margin-bottom: 12px; font-size: 22px;">Presença Solicitada!</h2>
+            <p style="color: var(--text-muted); margin-bottom: 25px; line-height: 1.5; font-size: 14px;">Que tal acessar nossos conteúdos, quizzes e monitorias online de casa? Crie sua conta informando apenas seu e-mail!</p>
+            <form id="form-presencial-cadastro">
+                <div class="form-group" style="text-align: left;"><label>Seu E-mail Institucional</label><input type="email" id="presencial-email" required pattern="[^\s@]+@aluno\.ifsc\.edu\.br" title="Use seu e-mail institucional terminado em @aluno.ifsc.edu.br" placeholder="aluno@aluno.ifsc.edu.br"></div>
+                <button type="submit" class="btn-submit" id="btn-submit-presencial-cad" style="margin-bottom: 15px;">Criar Minha Conta</button>
+                <button type="button" class="btn-text-action" style="width: 100%; border: none; font-size: 14px;" onclick="fecharPresencialEIrParaLogin()">Não, obrigado</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- AUTH SECTION -->
+    <div class="auth-wrapper" id="auth-section">
+        <div class="auth-container">
+            <div class="tabs-wrapper">
+                <div class="tabs"><button class="tab-btn active" id="btn-tab-login">Entrar</button><button class="tab-btn" id="btn-tab-cadastro">Cadastrar</button></div>
+            </div>
+            
+            <div class="form-area">
+                <div class="header"><h1>Monitoria de Informática</h1><p id="header-text">Faça login com seu e-mail institucional</p></div>
+                <form id="form-login">
+                    <input type="hidden" name="action" value="login">
+                    <div class="form-group"><label>E-mail Institucional</label><input type="email" name="email" required placeholder="aluno@aluno.ifsc.edu.br"></div>
+                    <div class="form-group"><label>Senha</label><input type="password" name="senha" required placeholder="Sua senha"></div>
+                    <button type="submit" class="btn-submit" id="btn-submit-login">Entrar</button>
+                </form>
+                <form id="form-cadastro" style="display:none;">
+                    <input type="hidden" name="action" value="cadastro">
+                    <div class="form-group"><label>Matrícula (11 a 12 dígitos)</label><input type="text" inputmode="numeric" pattern="\d{11,12}" title="Digite apenas números, de 11 a 12 dígitos" maxlength="12" name="matricula" required placeholder="Ex: 20261020301"></div>
+                    <div class="form-group"><label>Nome</label><input type="text" name="nome" required placeholder="Seu nome completo"></div>
+                    <div class="form-group"><label>E-mail (IFSC)</label><input type="email" name="email" required pattern="[^\s@]+@aluno\.ifsc\.edu\.br" title="Use seu e-mail institucional terminado em @aluno.ifsc.edu.br" placeholder="aluno@aluno.ifsc.edu.br"></div>
+                    <button type="submit" class="btn-submit" id="btn-submit-cadastro">Criar Conta</button>
+                </form>
+                <div id="status-message" class="status-message"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- DASHBOARD SECTION -->
+    <div class="dashboard-wrapper" id="dashboard-section">
+        <header class="topbar">
+            <div class="topbar-brand"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg> Monitorando</div>
+            
+            <nav class="nav-menu">
+                <button class="nav-link active" id="nav-conteudo">Conteúdo</button>
+                <button class="nav-link" id="nav-forum">Fórum</button>
+                <button class="nav-link" id="nav-contato">Contato</button>
+                <button class="nav-link" id="nav-atendimento">Registrar Atendimento</button>
+                <button class="nav-link" id="nav-quiz" style="display:none;">Quiz</button>
+                <button class="nav-link" id="nav-filmes" style="display:none;">Cinema</button>
+                <button class="nav-link" id="nav-avisos" style="display:none;">Admin</button>
+            </nav>
+
+            <div class="user-controls">
+                <div class="notification-container">
+                    <div class="notification-icon-wrapper" id="btn-toggle-notificacoes" title="Ver Notificações">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 0 1-3.46 0"></path></svg>
+                        <span class="notification-badge-dot" id="dot-notificacao"></span>
+                    </div>
+                    <div class="notification-dropdown" id="notification-dropdown">
+                        <div class="notification-header">Notificações</div>
+                        <div class="notification-list" id="notification-list-content"><div class="notification-empty">Nenhuma notificação nova.</div></div>
+                    </div>
+                </div>
+
+                <div class="notification-container">
+                    <div class="user-profile-badge notification-icon-wrapper" id="btn-toggle-menu-usuario" style="width:auto; height:auto; padding:6px 12px; border-radius:20px; gap:8px;">
+                        <img id="display-user-avatar" src="" class="user-avatar-header" alt="Avatar" style="display:none;">
+                        <span class="user-name" id="display-user-name">Olá, Estudante</span>
+                        <span style="font-size:10px;">▾</span>
+                    </div>
+                    <div class="notification-dropdown" id="menu-usuario-dropdown" style="width:220px;">
+                        <div class="notification-list" style="max-height:none; padding:10px; display:flex; flex-direction:column; gap:8px;">
+                            <button class="btn-action-small" id="btn-abrir-modal-senha" style="width:100%;">Alterar Senha</button>
+                            <button class="btn-action-small" id="btn-abrir-modal-perfil" style="width:100%; display:none;">Perfil</button>
+                            <button class="btn-action-small" id="btn-compartilhar-site" style="width:100%; display:none;" onclick="abrirModalCompartilhar()">Compartilhar (QR)</button>
+                            <button class="btn-action-small btn-danger" id="btn-logout" style="width:100%;">Sair</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </header>
+
+        <!-- CONTEÚDO / MÓDULOS -->
+        <div class="dashboard-layout" id="sec-conteudo">
+            <aside class="sidebar">
+                <div class="sidebar-header"><h3>Módulos</h3><button id="btn-abrir-modal-modulo" class="btn-admin" style="display: none;">+ Novo</button></div>
+                <ul class="module-list" id="module-list"></ul>
+            </aside>
+            <main class="content-area">
+                <div id="view-modulo">
+                    <div class="content-header">
+                        <div><h1 id="titulo-modulo-selecionado">Selecione um módulo</h1><p id="desc-modulo-selecionado" style="color:var(--text-muted);">As aulas aparecerão aqui.</p></div>
+                        <div><button id="btn-editar-modulo" class="btn-text-action" style="display:none;">Editar</button><button id="btn-deletar-modulo" class="btn-text-action danger" style="display:none;">Excluir</button><button id="btn-abrir-modal-aula" class="btn-admin" style="display: none; margin-left:10px;">+ Nova Aula</button></div>
+                    </div>
+                    <div class="form-group" style="max-width:420px;"><input type="text" id="busca-aulas" placeholder="Pesquisar aulas pelo título..."></div>
+                    <div class="aulas-grid" id="aulas-grid"></div>
+                </div>
+
+                <div id="view-aula" style="display: none;">
+                    <button class="btn-voltar" id="btn-voltar-modulo">← Voltar para o módulo</button>
+                    <div class="content-header"><h1 id="titulo-aula-selecionada">Título</h1></div>
+                    <div class="video-container" id="video-box"><iframe id="iframe-video" src="" title="Player" allowfullscreen></iframe></div>
+                    <div class="description-box">
+                        <h3 style="margin-bottom: 12px; font-size: 18px;">Sobre esta aula</h3>
+                        <p id="desc-aula-selecionada" style="color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;"></p>
+                        <button id="btn-concluir-aula" class="btn-concluir" style="display:none;"><span>✓</span> Marcar como Concluída</button>
+                    </div>
+                    <div class="comments-section">
+                        <h3 style="margin-bottom: 20px; font-size: 18px;">Dúvidas da Aula</h3>
+                        <div class="comments-list" id="comments-list-aula"></div>
+                        <form id="form-comentario-aula">
+                            <div class="form-group"><textarea id="texto-comentario-aula" placeholder="Escreva sua dúvida... (máx. 500 caracteres)" required rows="3" maxlength="500"></textarea></div>
+                            <button type="submit" class="btn-submit">Postar Dúvida</button>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- FÓRUM -->
+        <div class="dashboard-layout" id="sec-forum" style="display:none; width: 100%;">
+            <main class="content-area" style="max-width: 1100px; margin: 0 auto;">
+                <div id="view-forum-lista">
+                    <div class="content-header"><div><h1>Fórum de Discussão</h1><p style="color:var(--text-muted);">Tire dúvidas e interaja com os monitores.</p></div><button id="btn-abrir-modal-topico" class="btn-submit" style="width: auto; padding: 10px 20px;">+ Criar Tópico</button></div>
+                    <div class="form-group" style="position:relative; max-width:420px;"><input type="text" id="busca-forum" placeholder="Pesquisar tópicos pelo título..."></div>
+                    <div id="forum-topicos-container"></div>
+                </div>
+                <div id="view-forum-topico" style="display:none;">
+                    <button class="btn-voltar" id="btn-voltar-forum">← Voltar para o Fórum</button>
+                    <div class="forum-topico-card" style="border-color: var(--primary-color);">
+                        <div style="display:flex; justify-content:space-between; align-items:flex-start;"><h1 id="detalhe-topico-titulo" style="font-size:24px; color:var(--primary-color); margin-bottom:8px;"></h1><div id="detalhe-topico-acoes"></div></div>
+                        <div class="forum-topico-meta" id="detalhe-topico-meta"></div><p class="forum-topico-texto" id="detalhe-topico-texto"></p>
+                    </div>
+                    <div class="comments-section">
+                        <h3 style="margin-bottom: 20px; font-size: 18px;">Respostas do Tópico</h3>
+                        <div class="comments-list" id="comments-list-forum"></div>
+                        <form id="form-comentario-forum">
+                            <div class="form-group"><textarea id="texto-comentario-forum" placeholder="Escreva sua resposta... (máx. 500 caracteres)" required rows="3" maxlength="500"></textarea></div>
+                            <button type="submit" class="btn-submit">Responder Tópico</button>
+                        </form>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- CONTATO / MONITORES -->
+        <div class="dashboard-layout" id="sec-contato" style="display:none; width: 100%;">
+            <main class="content-area" style="max-width: 1050px; margin: 0 auto;"><div class="content-header"><div><h1>Horário de Atendimento e Contato</h1></div></div><div id="monitores-horarios-container"></div></main>
+        </div>
+
+        <!-- ATENDIMENTO -->
+        <div class="dashboard-layout" id="sec-atendimento" style="display:none; width: 100%;">
+            <main class="content-area" style="max-width: 800px; margin: 0 auto;">
+                <div class="content-header"><div><h1 id="titulo-secao-atendimento">Registrar Atendimento</h1></div></div>
+                <div id="view-atendimento-aluno" class="description-box" style="background: var(--container-card); border-radius: 16px; padding: 35px;">
+                    <form id="form-registro-atendimento">
+                        <div class="form-group">
+                            <label>Curso</label>
+                            <select id="atendimento-curso" required>
+                                <option value="" disabled selected>Selecione seu curso...</option>
+                                <option value="Mecatrônica Técnico Integrado">Mecatrônica Técnico Integrado</option>
+                                <option value="Mecatrônica Engenharia">Mecatrônica Engenharia</option>
+                                <option value="Eletrotécnica Técnico Subsequente">Eletrotécnica Técnico Subsequente</option>
+                                <option value="Edificações Técnico Integrado">Edificações Técnico Integrado</option>
+                                <option value="Edificações Técnico Subsequente">Edificações Técnico Subsequente</option>
+                                <option value="Química Técnico Integrado">Química Técnico Integrado</option>
+                                <option value="Engenharia Civil">Engenharia Civil</option>
+                            </select>
+                        </div>
+                        <div class="form-group"><label>Ano / Fase</label><input type="text" id="atendimento-fase-ano" required placeholder="Ex: 1º Ano ou 3ª Fase"></div>
+                        <div class="form-group"><label>Monitor</label><select id="atendimento-monitor" required><option value="" disabled selected>Carregando monitores...</option></select></div>
+                        <button type="submit" class="btn-submit">Solicitar Atendimento</button>
+                    </form>
+                </div>
+                <div id="view-atendimento-monitor" style="display:none;"><div id="solicitacoes-pendentes-container"></div></div>
+            </main>
+        </div>
+
+        <!-- QUIZ -->
+        <div class="dashboard-layout" id="sec-quiz" style="display:none; width: 100%;">
+            <main class="content-area" style="max-width: 900px; margin: 0 auto;">
+                <div class="content-header"><div><h1>Quiz de Conhecimentos</h1><p style="color:var(--text-muted);">Teste seus conhecimentos e pontue no ranking.</p></div></div>
+                <div id="quiz-execucao-aluno" class="description-box" style="text-align:center; padding: 40px; background: var(--container-card); display:none;">
+                    <h3 style="margin-bottom: 15px;">Quiz Liberado!</h3>
+                    <p style="color: var(--text-muted); margin-bottom: 25px;">Escolha abaixo qual categoria deseja praticar. Atenção: ao fechar ou concluir o quiz, ele será bloqueado e um relatório será enviado.</p>
+                    <div class="form-group" style="max-width: 400px; margin: 0 auto 25px auto;"><label>Escolha a Categoria</label><select id="select-categoria-aluno" class="form-group"></select></div>
+                    <button class="btn-submit" onclick="abrirModalResponderQuiz()" style="max-width: 250px; margin: 0 auto;">Iniciar Quiz</button>
+                </div>
+                <div id="quiz-painel-monitor" style="display:none;">
+                    <div class="description-box" style="background: var(--container-card); margin-bottom: 25px;">
+                        <h3 style="margin-bottom: 15px;">Gerenciar Quiz e Configurações</h3>
+                        <p style="color:var(--text-muted); font-size:13px; margin-bottom:15px;">Ao liberar, todas as perguntas cadastradas abaixo ficam disponíveis para os alunos, organizadas por categoria.</p>
+                        <div class="form-group"><label>Tempo Limite (Minutos)</label><input type="number" id="quiz-tempo-input" value="5" min="1" max="60"></div>
+                        <div style="display: flex; gap: 15px; align-items: center; margin-top: 20px;"><button class="btn-submit" onclick="salvarEIniciarQuiz('sim')">Liberar Quiz para Alunos</button><button class="btn-submit btn-danger" onclick="salvarEIniciarQuiz('nao')">Ocultar Quiz</button></div>
+                    </div>
+                    <div class="description-box" style="background: var(--container-card);"><h3 style="margin-bottom: 15px; color: var(--primary-color);">Ranking de Pontuação dos Estudantes</h3><div class="schedule-table-wrapper"><table class="schedule-table"><thead><tr><th>Posição</th><th>Matrícula</th><th>Nome</th><th>Pontuação Total</th></tr></thead><tbody id="ranking-tbody"><tr><td colspan="4">Carregando ranking...</td></tr></tbody></table></div></div>
+                    <div class="description-box" style="background: var(--container-card); margin-top: 25px;">
+                        <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
+                            <h3 style="color: var(--primary-color);">Perguntas Cadastradas</h3>
+                            <button id="btn-abrir-modal-pergunta" class="btn-admin">+ Nova Pergunta</button>
+                        </div>
+                        <div id="lista-perguntas-quiz-container"><p style="color:var(--text-muted);">Carregando perguntas...</p></div>
+                    </div>
+                </div>
+            </main>
+        </div>
+
+        <!-- ADMIN / AVISOS -->
+        <div class="dashboard-layout" id="sec-avisos" style="display:none; width: 100%;">
+            <main class="content-area" style="max-width: 850px; margin: 0 auto;">
+                <div class="content-header"><div><h1>Administração</h1><p style="color:var(--text-muted);">Avisos gerais, controle de acesso e convites de visitantes.</p></div></div>
+                <div class="description-box" style="background: var(--container-card); border-radius: 16px; padding: 35px;"><h3 style="margin-bottom:15px;">Aviso Geral</h3><form id="form-salvar-aviso"><div class="form-group"><label>Texto do Aviso</label><textarea id="input-texto-aviso" rows="6" required placeholder="Digite a mensagem de alerta..." maxlength="500"></textarea></div><button type="submit" class="btn-submit" id="btn-submit-aviso">Publicar e Enviar por E-mail</button></form></div>
+                <div class="description-box" style="background: var(--container-card); border-radius: 16px; padding: 35px; margin-top: 25px;"><h3 style="margin-bottom:15px;">Convidar Visitante (Ban Privativo)</h3><form id="form-convidar-visitante"><div class="form-group"><label>Nome</label><input type="text" id="convite-nome" required></div><div class="form-group"><label>E-mail</label><input type="email" id="convite-email" required></div><button type="submit" class="btn-submit">Enviar Convite</button></form></div>
+                <div class="description-box" style="background: var(--container-card); border-radius: 16px; padding: 35px; margin-top: 25px;"><h3 style="margin-bottom:8px;">Banir Usuário</h3><form id="form-banir-usuario"><div class="form-group"><label>Matrícula do Usuário</label><input type="text" id="ban-matricula" required></div><div class="form-group"><label>Tipo de Banimento</label><select id="ban-tipo" required><option value="corretivo">Corretivo (15 dias)</option><option value="emergencial">Emergencial (permanente)</option></select></div><div class="form-group"><label>Motivo</label><input type="text" id="ban-motivo" maxlength="300"></div><button type="submit" class="btn-submit btn-danger">Aplicar Banimento</button></form></div>
+                <div class="description-box" style="background: var(--container-card); border-radius: 16px; padding: 35px; margin-top: 25px;"><h3 style="margin-bottom:15px;">Usuários Banidos Atualmente</h3><div id="lista-banidos-container"></div></div>
+            </main>
+        </div>
+        
+        <!-- FILMES -->
+        <div class="dashboard-layout" id="sec-filmes" style="display:none; width: 100%;">
+            <main class="content-area" style="max-width: 1100px; margin: 0 auto;">
+                <div class="content-header"><div><h1>Cinema</h1><p style="color:var(--text-muted);">Disponível aos sábados e domingos.</p></div><button id="btn-abrir-modal-filme" class="btn-submit" style="width:auto; padding:10px 20px; display:none;">+ Adicionar Filme</button></div>
+                <div id="filmes-busca-wrapper" style="display:none; margin-bottom:20px;"><input type="text" id="filmes-busca-input" placeholder="Pesquisar filme pelo título..." style="width:100%; padding:12px 16px; border:1px solid var(--input-border); border-radius:10px; background-color:var(--input-bg); color:var(--text-main); font-size:14px; outline:none; font-family:inherit;" oninput="filtrarFilmes()"></div>
+                <div id="filmes-bloqueado-aviso" style="display:none;" class="description-box"></div><div class="aulas-grid" id="filmes-grid"></div>
+            </main>
+        </div>
+    </div>
+
+    <div class="toast-notification" id="toast-notification">Mensagem</div>
+
+    <!-- MODAIS DO SISTEMA -->
+    <div class="modal-overlay" id="modal-responder-quiz"><div class="modal-content" style="max-width: 550px;"><span class="close-modal" onclick="tentarFecharModalQuiz()">&times;</span><div class="header"><h1 id="quiz-modal-titulo">Quiz</h1><p id="quiz-timer-display" style="color: var(--danger-color); font-weight: 700; font-size: 16px; margin-top: 5px;"></p></div><div id="quiz-modal-corpo" style="margin-bottom: 25px;"><p id="quiz-modal-pergunta" style="font-size: 16px; font-weight: 600; margin-bottom: 20px; line-height: 1.5;"></p><div id="quiz-modal-opcoes" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;"></div><div id="quiz-feedback-box" style="display: none; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; line-height: 1.5;"></div><button class="btn-submit" id="btn-proxima-questao" style="display: none;" onclick="proximaQuestaoQuiz()">Próxima Questão</button></div></div></div>
+    <div class="modal-overlay" id="modal-pergunta-quiz"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-pergunta-quiz').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-pergunta">Nova Pergunta</h1></div><form id="form-pergunta-quiz"><input type="hidden" id="perg-id"><div class="form-group"><label>Categoria</label><select id="perg-categoria" required><option value="PYTHON">PYTHON</option><option value="C">C</option><option value="C++">C++</option><option value="LOGICA">LÓGICA</option><option value="OUTROS">OUTROS</option></select></div><div class="form-group"><label>Enunciado</label><textarea id="perg-enunciado" rows="4" required maxlength="1000" placeholder="Digite a afirmação que o aluno vai avaliar como Verdadeira ou Falsa"></textarea></div><div class="form-group"><label>Gabarito</label><select id="perg-gabarito" required><option value="V">Verdadeiro</option><option value="F">Falso</option></select></div><div class="form-group"><label>Explicação (mostrada após a resposta)</label><textarea id="perg-explicacao" rows="3" required maxlength="1000" placeholder="Explique por que a resposta está correta"></textarea></div><button type="submit" class="btn-submit">Salvar Pergunta</button></form></div></div>
+    <div class="modal-overlay" id="modal-confirmacao"><div class="modal-content" style="max-width: 420px; text-align: center;"><span class="close-modal" onclick="fecharModalConfirmacao()">&times;</span><div class="modal-confirm-box"><h2 style="margin-bottom: 10px; font-size: 20px;">Confirmar Ação</h2><p id="texto-confirmacao-modal" style="color: var(--text-muted); margin-bottom: 20px;"></p><div style="display: flex; gap: 12px;"><button class="btn-submit" style="background: var(--input-border);" onclick="fecharModalConfirmacao()">Cancelar</button><button class="btn-submit btn-danger" onclick="confirmarAcaoModal()">Confirmar</button></div></div></div></div>
+    <div class="modal-overlay" id="modal-alerta-geral"><div class="modal-content" style="max-width: 450px;"><span class="close-modal" onclick="document.getElementById('modal-alerta-geral').style.display='none'">&times;</span><div class="header"><h1>Novo Aviso</h1></div><p id="texto-alerta-modal" style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.5;"></p><button class="btn-submit" onclick="document.getElementById('modal-alerta-geral').style.display='none'">Entendido</button></div></div>
+    <div class="modal-overlay" id="modal-compartilhar"><div class="modal-content" style="max-width: 380px; text-align: center;"><span class="close-modal" onclick="document.getElementById('modal-compartilhar').style.display='none'">&times;</span><div class="header"><h1>Compartilhar (QR Presencial)</h1></div><div style="background: #fff; padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 20px;"><img id="qrcode-img" src="" alt="QR" style="width: 200px; height: 200px; display: block;"></div><p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Este QR Code abre direto na tela de Registro de Presença.</p><button class="btn-submit" onclick="copiarLinkSite()">Copiar Link</button></div></div>
+    <div class="modal-overlay" id="modal-editar-horario"><div class="modal-content" style="max-width: 600px;"><span class="close-modal" onclick="document.getElementById('modal-editar-horario').style.display='none'">&times;</span><div class="header"><h1>Editar Horário</h1></div><form id="form-editar-horario"><input type="hidden" id="edit-horario-email"><div class="form-group"><label>Sala</label><input type="text" id="edit-sala" required></div><div class="form-group"><label>Segunda</label><input type="text" id="edit-segunda"></div><div class="form-group"><label>Terça</label><input type="text" id="edit-terca"></div><div class="form-group"><label>Quarta</label><input type="text" id="edit-quarta"></div><div class="form-group"><label>Quinta</label><input type="text" id="edit-quinta"></div><div class="form-group"><label>Sexta</label><input type="text" id="edit-sexta"></div><button type="submit" class="btn-submit">Salvar Horário</button></form></div></div>
+    <div class="modal-overlay" id="modal-topico-forum"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-topico-forum').style.display='none'">&times;</span><div class="header"><h1>Novo Tópico</h1></div><form id="form-add-topico"><div class="form-group"><label>Título</label><input type="text" id="topico-titulo" required maxlength="120"></div><div class="form-group"><label>Texto</label><textarea id="topico-texto" rows="5" required maxlength="500"></textarea></div><button type="submit" class="btn-submit">Publicar Tópico</button></form></div></div>
+    <div class="modal-overlay" id="modal-senha"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-senha').style.display='none'">&times;</span><div class="header"><h1>Alterar Senha</h1></div><form id="form-alt-senha"><div class="form-group"><label>Nova Senha (mínimo 8 caracteres)</label><input type="password" id="pass-nova" minlength="8" required></div><button type="submit" class="btn-submit">Atualizar Senha</button></form></div></div>
+    <div class="modal-overlay" id="modal-perfil"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-perfil').style.display='none'">&times;</span><div class="header"><h1>Foto de Perfil</h1></div><form id="form-atualizar-perfil"><div class="form-group"><label>URL da Foto</label><input type="url" id="perfil-foto-url" required></div><button type="submit" class="btn-submit">Salvar Perfil</button></form></div></div>
+    <div class="modal-overlay" id="modal-modulo"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-modulo').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-modulo">Módulo</h1></div><form id="form-add-modulo"><input type="hidden" id="mod-id"><div class="form-group"><label>Nome</label><input type="text" id="mod-nome" required></div><div class="form-group"><label>Descrição</label><input type="text" id="mod-desc"></div><div class="form-group"><label>Ocultar para Alunos?</label><select id="mod-oculto"><option value="não">Não</option><option value="sim">Sim</option></select></div><button type="submit" class="btn-submit">Salvar Módulo</button></form></div></div>
+    <div class="modal-overlay" id="modal-player-filme"><div class="modal-content" style="max-width: 950px; padding: 20px;"><span class="close-modal" onclick="fecharPlayerFilme()">&times;</span><div class="header" style="text-align:left; margin-bottom:15px;"><h1 id="titulo-player-filme" style="font-size:20px;">Filme</h1></div><div class="video-container" style="margin-bottom:0;"><iframe id="iframe-player-filme" src="" title="Player" allow="autoplay; fullscreen" allowfullscreen></iframe></div></div></div>
+    <div class="modal-overlay" id="modal-filme"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-filme').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-filme">Filme</h1></div><form id="form-add-filme"><input type="hidden" id="filme-id"><div class="form-group"><label>Título</label><input type="text" id="filme-titulo" required maxlength="150"></div><div class="form-group"><label>ID do Arquivo no Google Drive</label><input type="text" id="filme-drive-id" placeholder="Ex: 1AbCDefGhIJKLmnopQRstuv" required></div><div class="form-group"><label>URL da Capa (Opcional - Substitui a do Drive)</label><input type="text" id="filme-capa-url" placeholder="https://link.com/minhacapa.jpg"></div><button type="submit" class="btn-submit">Salvar Filme</button></form></div></div>
+    <div class="modal-overlay" id="modal-aula"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-aula').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-aula">Aula</h1></div><form id="form-add-aula"><input type="hidden" id="aula-id"><div class="form-group"><label>Link ou Embed</label><textarea id="aula-link" required rows="3"></textarea></div><div class="form-group"><label>Título</label><input type="text" id="aula-nome"></div><div class="form-group"><label>Descrição</label><textarea id="aula-desc" rows="2"></textarea></div><button type="submit" class="btn-submit">Salvar Aula</button></form></div></div>
+
+    <script>
+        function escapeParaJS(str) { if (!str) return ''; return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, ''); }
+        function processarTextoComLinks(texto) { if (!texto) return ''; let txt = texto.replace(/</g, "&lt;").replace(/>/g, "&gt;"); const regexLinks = /(https?:\/\/[^\s]+)/g; txt = txt.replace(regexLinks, '<a href="$1" target="_blank" class="link-destaque">$1</a>'); txt = txt.replace(/\n/g, '<br>'); return txt; }
+
+        let cacheAulasConcluidas = [];
+        const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth; let height = canvas.height = window.innerHeight;
+        window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
+        const chars = '0123456789ABCDEF{}[];<>/=+#$const let function void return'; const fontSize = 14; const drops = Array(Math.floor(width / fontSize)).fill(1);
+        
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(8, 9, 13, 0.15)'; ctx.fillRect(0, 0, width, height); ctx.font = '700 ' + fontSize + 'px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillStyle = (Math.random() > 0.92) ? '#ffffff' : '#ec4899'; 
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > height && Math.random() > 0.975) drops[i] = 0; drops[i]++;
+            }
+            requestAnimationFrame(drawMatrix);
+        }
+        requestAnimationFrame(drawMatrix);
+
+        const scriptURL = 'https://script.google.com/macros/s/AKfycbyTFRlzWLblwIvDFzLTNy2sYoR3RmJjHWchL5F1Qj4-A9vaaJk7ppMZjkycXISUsJ0/exec';
+        
+        let session = null; 
+        let currentContext = { modulo_id: '', aula_id: '', modulo_nome: '', modulo_desc: '', modulo_oculto: '', forum_topico_id: '' };
+        let cacheTopicosForum = null, cacheComentariosAula = [], cacheComentariosForum = [], cacheMonitores = null;
+        let confirmCallback = null; const toast = document.getElementById('toast-notification');
+        let infoPresencialSalva = { matricula: '', nome: '' }; 
+
+        function extrairSrc(inputStr) { let u = inputStr.trim(); if (u.toLowerCase().startsWith('<iframe')) { let match = u.match(/src=["'](.*?)["']/); if (match && match[1]) return match[1]; } return u; }
+        function obterIdYoutube(url) {
+            if (!url) return null; let u = extrairSrc(url);
+            try { if (u.includes('youtube.com/shorts/')) return u.split('youtube.com/shorts/')[1].split('?')[0].split('&')[0]; if (u.includes('watch?v=')) return u.split('watch?v=')[1].split('&')[0]; if (u.includes('youtu.be/')) return u.split('youtu.be/')[1].split('?')[0].split('&')[0]; if (u.includes('youtube.com/embed/')) return u.split('youtube.com/embed/')[1].split('?')[0].split('"')[0]; } catch(e) {} return null;
+        }
+        function formatarUrlVideo(url) {
+            if (!url) return ''; let input = extrairSrc(url);
+            if (input.includes('/file/d/')) { let driveId = input.split('/file/d/')[1].split('/')[0]; return `https://drive.google.com/file/d/${driveId}/preview`; }
+            let ytId = obterIdYoutube(input); if (ytId) return `https://www.youtube.com/embed/${ytId}?cc_load_policy=0`; return input;
+        }
+
+        document.getElementById('aula-link').addEventListener('input', function() {
+            let url = this.value.trim(); let ytId = obterIdYoutube(url); let tituloInput = document.getElementById('aula-nome');
+            if (ytId && tituloInput.value === '') { fetch(`https://noembed.com/embed?url=https://www.youtube.com/watch?v=${ytId}`).then(res => res.json()).then(data => { if (data.title && tituloInput.value === '') tituloInput.value = data.title; }).catch(() => {}); }
+        });
+
+        function formatarHorario(texto) { return (!texto || texto === '-') ? '-' : texto.toString().replace(/\//g, '<br>'); }
+        function showToast(text, isError = false) { toast.textContent = text; toast.className = isError ? 'toast-notification show error' : 'toast-notification show'; setTimeout(() => { toast.classList.remove('show'); }, 4000); }
+        function abrirModalConfirmacao(mensagem, callback) { document.getElementById('texto-confirmacao-modal').textContent = mensagem; confirmCallback = callback; document.getElementById('modal-confirmacao').style.display = 'flex'; }
+        function fecharModalConfirmacao() { confirmCallback = null; document.getElementById('modal-confirmacao').style.display = 'none'; }
+        function confirmarAcaoModal() { if (confirmCallback) { let cb = confirmCallback; confirmCallback = null; cb(); } document.getElementById('modal-confirmacao').style.display = 'none'; }
+        
+        function apiFetch(dataObj) { 
+            let fd = new URLSearchParams(); 
+            for (let key in dataObj) { if (dataObj[key] !== undefined && dataObj[key] !== null) fd.append(key, dataObj[key]); } 
+            return fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: fd }).then(res => res.json()); 
+        }
+
+        function abrirModalCompartilhar() {
+            let urlBase = window.location.href.split('#')[0].split('?')[0]; let urlQR = urlBase + "#presencial";
+            document.getElementById('qrcode-img').src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(urlQR)}`;
+            document.getElementById('modal-compartilhar').style.display = 'flex';
+        }
+        function copiarLinkSite() { navigator.clipboard.writeText(window.location.href.split('#')[0] + "#presencial").then(() => { showToast("Link de presença copiado!"); document.getElementById('modal-compartilhar').style.display = 'none'; }); }
+
+        document.getElementById('btn-toggle-notificacoes').addEventListener('click', (e) => { e.stopPropagation(); let drop = document.getElementById('notification-dropdown'); drop.style.display = drop.style.display === 'block' ? 'none' : 'block'; document.getElementById('menu-usuario-dropdown').style.display = 'none'; });
+        document.getElementById('btn-toggle-menu-usuario').addEventListener('click', (e) => { e.stopPropagation(); let drop = document.getElementById('menu-usuario-dropdown'); drop.style.display = drop.style.display === 'block' ? 'none' : 'block'; document.getElementById('notification-dropdown').style.display = 'none'; });
+        window.addEventListener('click', () => { document.getElementById('notification-dropdown').style.display = 'none'; document.getElementById('menu-usuario-dropdown').style.display = 'none'; });
+
+        let cacheNotificacoes = [];
+        function checarNotificacoes() {
+            if (!session || !session.matricula) return;
+            apiFetch({ action: 'verificar_notificacoes', matricula: session.matricula }).then(data => {
+                if (data.status === 'sucesso' && data.notificacoes) {
+                    cacheNotificacoes = data.notificacoes;
+                    let listContent = document.getElementById('notification-list-content'); let dot = document.getElementById('dot-notificacao');
+                    if (data.notificacoes.length > 0) {
+                        dot.style.display = 'block'; listContent.innerHTML = '';
+                        data.notificacoes.forEach((n, idx) => { listContent.innerHTML += `<div class="notification-item" style="cursor:pointer;" onclick="abrirNotificacao(${idx})">${n.texto}<span>${n.data}</span></div>`; });
+                    } else { dot.style.display = 'none'; listContent.innerHTML = '<div class="notification-empty">Nenhuma notificação nova.</div>'; }
+                }
+            }).catch(() => {});
+        }
+
+        function abrirNotificacao(idx) {
+            let n = cacheNotificacoes[idx]; if (!n) return;
+            apiFetch({ action: 'marcar_notificacao_lida', matricula: session.matricula, texto: n.texto, data: n.data }).then(() => checarNotificacoes());
+            document.getElementById('notification-dropdown').style.display = 'none';
+            if (n.tipo === 'atendimento') { navAtendimento.click(); return; }
+            if (n.tipo === 'forum' && n.ref_modulo) {
+                alternarAbaNavegacao(navForum, secForum);
+                apiFetch({ action: 'listar_topicos_forum' }).then(data => {
+                    cacheTopicosForum = (data.topicos || []).reverse(); let idx2 = cacheTopicosForum.findIndex(t => t.id_forum === n.ref_modulo);
+                    if (idx2 !== -1) { abrirTopicoForum(idx2); setTimeout(() => { const el = document.getElementById('comments-list-forum'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300); }
+                    else { renderizarTopicosForum(); showToast('O tópico não está mais disponível.', true); }
+                }); return;
+            }
+            if (n.tipo === 'aula' && n.ref_modulo && n.ref_aula) {
+                alternarAbaNavegacao(navConteudo, secConteudo);
+                apiFetch({ action: 'listar_modulos', classe: session.classe }).then(dataMod => {
+                    let mod = (dataMod.modulos || []).find(m => m.id_modulo === n.ref_modulo);
+                    if (!mod) { showToast('Módulo não disponível.', true); return; }
+                    currentContext.modulo_id = mod.id_modulo; currentContext.modulo_nome = mod.nome; currentContext.modulo_desc = mod.descricao; currentContext.modulo_oculto = mod.oculto;
+                    document.getElementById('titulo-modulo-selecionado').textContent = mod.nome; document.getElementById('desc-modulo-selecionado').textContent = mod.descricao;
+                    apiFetch({ action: 'obter_aulas_concluidas', matricula: session.matricula }).then(resConcluidas => {
+                        cacheAulasConcluidas = resConcluidas.aulas_concluidas || [];
+                        apiFetch({ action: 'listar_aulas', id_modulo: mod.id_modulo }).then(dataAulas => {
+                            cacheAulasDoModulo = dataAulas.aulas || []; let aula = cacheAulasDoModulo.find(a => a.aula_id === n.ref_aula);
+                            if (!aula) { renderizarAulas(cacheAulasDoModulo); showToast('Aula não disponível.', true); return; }
+                            currentContext.aula_id = aula.aula_id; document.getElementById('view-modulo').style.display = 'none'; document.getElementById('view-aula').style.display = 'block';
+                            document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula; document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao); document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
+                            document.getElementById('btn-concluir-aula').style.display = (session.classe === 'monitor') ? 'none' : 'inline-flex'; if (session.classe !== 'monitor') atualizarEstadoBotaoConcluir(aula.aula_id);
+                            carregarComentariosAula(); setTimeout(() => { const el = document.getElementById('comments-list-aula'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
+                        });
+                    });
+                });
+            }
+        }
+
+        function verificarAlertaPlataforma() {
+            apiFetch({ action: 'obter_alerta' }).then(data => {
+                if (data.status === 'sucesso' && data.alerta && data.alerta.trim() !== '') {
+                    if (window.ultimo_aviso_visto !== data.alerta.trim()) { 
+                        document.getElementById('texto-alerta-modal').textContent = data.alerta.trim(); 
+                        document.getElementById('modal-alerta-geral').style.display = 'flex'; 
+                        window.ultimo_aviso_visto = data.alerta.trim();
+                    }
+                }
+            }).catch(() => {});
+        }
+
+        const navConteudo = document.getElementById('nav-conteudo'), navForum = document.getElementById('nav-forum'), navContato = document.getElementById('nav-contato'), navAtendimento = document.getElementById('nav-atendimento'), navQuiz = document.getElementById('nav-quiz'), navAvisos = document.getElementById('nav-avisos'), navFilmes = document.getElementById('nav-filmes');
+        const secConteudo = document.getElementById('sec-conteudo'), secForum = document.getElementById('sec-forum'), secContato = document.getElementById('sec-contato'), secAtendimento = document.getElementById('sec-atendimento'), secQuiz = document.getElementById('sec-quiz'), secAvisos = document.getElementById('sec-avisos'), secFilmes = document.getElementById('sec-filmes');
+
+        function alternarAbaNavegacao(btnAtivo, secaoAtiva) {
+            document.querySelectorAll('.nav-link').forEach(btn => btn.classList.remove('active')); btnAtivo.classList.add('active');
+            secConteudo.style.display = 'none'; secForum.style.display = 'none'; secContato.style.display = 'none'; secAtendimento.style.display = 'none'; secQuiz.style.display = 'none'; secAvisos.style.display = 'none';
+            if (secFilmes) secFilmes.style.display = 'none'; 
+            secaoAtiva.style.display = 'flex';
+        }
+
+        navConteudo.addEventListener('click', () => alternarAbaNavegacao(navConteudo, secConteudo));
+        navForum.addEventListener('click', () => { alternarAbaNavegacao(navForum, secForum); carregarTopicosForum(); });
+        navContato.addEventListener('click', () => { alternarAbaNavegacao(navContato, secContato); carregarEExibirMonitores(); });
+        navAtendimento.addEventListener('click', () => { alternarAbaNavegacao(navAtendimento, secAtendimento); prepararTelaAtendimento(); });
+        navQuiz.addEventListener('click', () => { alternarAbaNavegacao(navQuiz, secQuiz); carregarDadosQuiz(); });
+        navAvisos.addEventListener('click', () => { alternarAbaNavegacao(navAvisos, secAvisos); carregarBanidos(); });
+        if (navFilmes) navFilmes.addEventListener('click', () => { alternarAbaNavegacao(navFilmes, secFilmes); carregarFilmes(); });
+
+        window.addEventListener('load', () => {
+            const isMobile = window.innerWidth <= 768 || /Android|webOS|iPhone|iPad|iPod/i.test(navigator.userAgent);
+            const isViaQR = window.location.hash === '#presencial';
+            
+            const savedSession = localStorage.getItem('monitoria_session');
+            if (savedSession) {
+                try {
+                    session = JSON.parse(savedSession);
+                    ativarPainel();
+                    return;
+                } catch(e) {
+                    localStorage.removeItem('monitoria_session');
+                }
+            }
+            
+            if (isViaQR || isMobile) { abrirTelaPresencialMobile(); }
+        });
+
+        function abrirTelaPresencialMobile() {
+            document.getElementById('mobile-presencial-overlay').style.display = 'flex';
+            apiFetch({ action: 'listar_monitores' }).then(data => {
+                let select = document.getElementById('presencial-monitor'); select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
+                (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${m.nome}">${m.nome}</option>`; });
+            });
+        }
+        function fecharPresencialEIrParaLogin() { document.getElementById('mobile-presencial-overlay').style.display = 'none'; }
+
+        document.getElementById('form-presencial').addEventListener('submit', e => {
+            e.preventDefault();
+            let btn = document.getElementById('btn-submit-presencial'); btn.disabled = true; btn.textContent = 'Registrando...';
+            infoPresencialSalva.matricula = document.getElementById('presencial-matricula').value; infoPresencialSalva.nome = document.getElementById('presencial-nome').value;
+
+            apiFetch({ 
+                action: 'solicitar_atendimento', matricula: infoPresencialSalva.matricula, nome: infoPresencialSalva.nome, email: "", 
+                curso: document.getElementById('presencial-curso').value, fase_ano: document.getElementById('presencial-fase').value, monitor_nome: document.getElementById('presencial-monitor').value, status: 'PENDENTE'
+            }).then(data => { 
+                showToast(data.mensagem); btn.disabled = false; btn.textContent = 'Confirmar Presença';
+                document.getElementById('step-1-presenca').style.display = 'none'; document.getElementById('step-2-cadastro').style.display = 'block';
+            });
+        });
+
+        document.getElementById('form-presencial-cadastro').addEventListener('submit', e => {
+            e.preventDefault();
+            let btn = document.getElementById('btn-submit-presencial-cad'); btn.disabled = true; btn.textContent = 'Criando...';
+            let emailAluno = document.getElementById('presencial-email').value;
+
+            apiFetch({ action: 'cadastro', matricula: infoPresencialSalva.matricula, nome: infoPresencialSalva.nome, email: emailAluno }).then(data => {
+                btn.disabled = false; btn.textContent = 'Criar Minha Conta';
+                if (data.status === 'sucesso') {
+                    showToast("Conta criada! Você já será conectado.");
+                    apiFetch({ action: 'login', email: emailAluno, senha: infoPresencialSalva.matricula }).then(dataLogin => {
+                        if (dataLogin.status === 'sucesso') {
+                            session = { nome: dataLogin.nome, matricula: dataLogin.matricula, email: dataLogin.email, classe: dataLogin.classe, senha_alterada: dataLogin.senha_alterada || 'nao', foto_perfil: dataLogin.foto_perfil || '', banimento: dataLogin.banimento || null };
+                            localStorage.setItem('monitoria_session', JSON.stringify(session));
+                            document.getElementById('mobile-presencial-overlay').style.display = 'none'; ativarPainel();
+                        }
+                    });
+                } else { showToast(data.mensagem, true); }
+            });
+        });
+
+        document.getElementById('btn-logout').addEventListener('click', () => { 
+            session = null; 
+            localStorage.removeItem('monitoria_session');
+            location.reload(); 
+        });
+
+        document.querySelectorAll('.close-modal').forEach(btn => { btn.addEventListener('click', () => { document.querySelectorAll('.modal-overlay').forEach(m => m.style.display = 'none'); }); });
+        document.getElementById('btn-abrir-modal-senha').addEventListener('click', () => { document.getElementById('form-alt-senha').reset(); document.getElementById('modal-senha').style.display = 'flex'; });
+        document.getElementById('btn-abrir-modal-perfil').addEventListener('click', () => { document.getElementById('perfil-foto-url').value = session.foto_perfil || ''; document.getElementById('modal-perfil').style.display = 'flex'; });
+        document.getElementById('btn-abrir-modal-topico').addEventListener('click', () => { document.getElementById('form-add-topico').reset(); document.getElementById('modal-topico-forum').style.display = 'flex'; });
+        document.getElementById('btn-abrir-modal-modulo').addEventListener('click', () => { document.getElementById('form-add-modulo').reset(); document.getElementById('mod-id').value = ''; document.getElementById('titulo-modal-modulo').textContent = 'Novo Módulo'; document.getElementById('modal-modulo').style.display = 'flex'; });
+        document.getElementById('btn-abrir-modal-aula').addEventListener('click', () => { document.getElementById('form-add-aula').reset(); document.getElementById('aula-id').value = ''; document.getElementById('titulo-modal-aula').textContent = 'Nova Aula'; document.getElementById('modal-aula').style.display = 'flex'; });
+        document.getElementById('btn-editar-modulo').addEventListener('click', () => { document.getElementById('mod-id').value = currentContext.modulo_id; document.getElementById('mod-nome').value = currentContext.modulo_nome; document.getElementById('mod-desc').value = currentContext.modulo_desc; document.getElementById('mod-oculto').value = currentContext.modulo_oculto; document.getElementById('titulo-modal-modulo').textContent = 'Editar Módulo'; document.getElementById('modal-modulo').style.display = 'flex'; });
+
+        document.getElementById('btn-deletar-modulo').addEventListener('click', () => {
+            abrirModalConfirmacao("Tem certeza que deseja excluir este módulo e todas as aulas dentro dele?", () => {
+                apiFetch({ action: 'deletar_modulo', id_modulo: currentContext.modulo_id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); document.getElementById('titulo-modulo-selecionado').textContent = 'Selecione um módulo'; document.getElementById('desc-modulo-selecionado').textContent = 'As aulas aparecerão aqui.'; document.getElementById('btn-editar-modulo').style.display = 'none'; document.getElementById('btn-deletar-modulo').style.display = 'none'; document.getElementById('btn-abrir-modal-aula').style.display = 'none'; document.getElementById('aulas-grid').innerHTML = ''; carregarModulos(); });
+            });
+        });
+
+        document.getElementById('btn-tab-login').addEventListener('click', () => { document.getElementById('btn-tab-login').classList.add('active'); document.getElementById('btn-tab-cadastro').classList.remove('active'); document.getElementById('form-login').style.display = 'block'; document.getElementById('form-cadastro').style.display = 'none'; document.getElementById('header-text').textContent = 'Faça login com seu e-mail institucional'; });
+        document.getElementById('btn-tab-cadastro').addEventListener('click', () => { document.getElementById('btn-tab-cadastro').classList.add('active'); document.getElementById('btn-tab-login').classList.remove('active'); document.getElementById('form-cadastro').style.display = 'block'; document.getElementById('form-login').style.display = 'none'; document.getElementById('header-text').textContent = 'Crie sua conta de estudante'; });
+
+        document.getElementById('form-login').addEventListener('submit', e => {
+            e.preventDefault();
+            let btn = document.getElementById('btn-submit-login'); btn.disabled = true; btn.textContent = 'Verificando...';
+            apiFetch({ action: 'login', email: document.getElementById('form-login').email.value, senha: document.getElementById('form-login').senha.value }).then(data => {
+                if (data.status === 'sucesso') {
+                    session = { nome: data.nome, matricula: data.matricula, email: data.email, classe: data.classe, senha_alterada: data.senha_alterada || 'nao', foto_perfil: data.foto_perfil || '', banimento: data.banimento || null };
+                    localStorage.setItem('monitoria_session', JSON.stringify(session));
+                    ativarPainel();
+                } else { showToast(data.mensagem, true); }
+            }).finally(() => { btn.disabled = false; btn.textContent = 'Entrar'; });
+        });
+
+        document.getElementById('form-cadastro').addEventListener('submit', e => {
+            e.preventDefault();
+            let btn = document.getElementById('btn-submit-cadastro'); btn.disabled = true; btn.textContent = 'Criando...';
+            apiFetch({ action: 'cadastro', matricula: document.getElementById('form-cadastro').matricula.value, nome: document.getElementById('form-cadastro').nome.value, email: document.getElementById('form-cadastro').email.value }).then(data => {
+                showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') document.getElementById('form-cadastro').reset();
+            }).finally(() => { btn.disabled = false; btn.textContent = 'Criar Conta'; });
+        });
+
+        function ativarPainel() {
+            document.getElementById('auth-section').style.display = 'none'; document.getElementById('dashboard-section').style.display = 'flex';
+            document.getElementById('bg-canvas').style.display = 'none'; 
+            
+            let primeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Usuário"; document.getElementById('display-user-name').textContent = `Olá, ${primeiroNome}`;
+            let avatarHeader = document.getElementById('display-user-avatar');
+            if (session.foto_perfil) { avatarHeader.src = session.foto_perfil; avatarHeader.style.display = 'block'; } else { avatarHeader.style.display = 'none'; }
+
+            if (session.classe === 'monitor') {
+                navAtendimento.textContent = 'Registro Atendimento'; navAvisos.style.display = 'flex'; navQuiz.style.display = 'flex'; if (navFilmes) navFilmes.style.display = 'flex';
+                document.getElementById('btn-compartilhar-site').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-modulo').style.display = 'block';
+            } else {
+                navAvisos.style.display = 'none'; document.getElementById('btn-compartilhar-site').style.display = 'none'; document.getElementById('btn-abrir-modal-modulo').style.display = 'none'; verificarVisibilidadeQuizAluno();
+                let hoje = new Date().getDay(); if (navFilmes) navFilmes.style.display = (hoje === 0 || hoje === 6) ? 'flex' : 'none';
+            }
+            aplicarRestricoesDeBanimento();
+            if (session.classe === 'monitor' || session.senha_alterada === 'sim') { document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; } else { document.getElementById('btn-abrir-modal-senha').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-perfil').style.display = 'none'; }
+            carregarModulos(); checarNotificacoes(); verificarAlertaPlataforma(); setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
+        }
+
+        function verificarVisibilidadeQuizAluno() { apiFetch({ action: 'obter_quiz_dados', matricula: session.matricula }).then(data => { if (data.status === 'sucesso') navQuiz.style.display = (data.visibilidade === 'sim' && !usuarioEstaImpedidoDe('quiz')) ? 'flex' : 'none'; }).catch(() => {}); }
+        function usuarioEstaImpedidoDe(tipoAcao) { let ban = session.banimento; if (!ban) return false; if (ban.tipo === 'corretivo') return (tipoAcao === 'forum' || tipoAcao === 'comentar' || tipoAcao === 'filmes'); if (ban.tipo === 'privativo') return (tipoAcao === 'forum' || tipoAcao === 'comentar' || tipoAcao === 'quiz'); return false; }
+        function aplicarRestricoesDeBanimento() {
+            let ban = session.banimento; if (session.classe === 'monitor') return; 
+            let avisoTopo = document.getElementById('faixa-banimento');
+            if (ban) {
+                if (!avisoTopo) { avisoTopo = document.createElement('div'); avisoTopo.id = 'faixa-banimento'; avisoTopo.style.cssText = 'background:var(--danger-color); color:#fff; text-align:center; padding:8px; font-size:13px; font-weight:600; position:relative; z-index:2;'; document.getElementById('dashboard-section').insertBefore(avisoTopo, document.getElementById('dashboard-section').firstChild); }
+                if (ban.tipo === 'corretivo') avisoTopo.textContent = `Sua conta está com restrições até ${ban.data_fim || ''} (ban corretivo): sem acesso ao fórum/comentários e à aba de Filmes.`;
+                else if (ban.tipo === 'privativo') avisoTopo.textContent = 'Acesso de visitante: você pode navegar pelo conteúdo, mas não pode comentar, postar no fórum ou participar do quiz.';
+                avisoTopo.style.display = 'block';
+            } else if (avisoTopo) { avisoTopo.style.display = 'none'; }
+
+            document.getElementById('btn-abrir-modal-topico').style.display = usuarioEstaImpedidoDe('forum') ? 'none' : 'inline-block';
+            let formComForum = document.getElementById('form-comentario-forum'); if (formComForum) formComForum.style.display = usuarioEstaImpedidoDe('forum') ? 'none' : 'block';
+            let formComAula = document.getElementById('form-comentario-aula'); if (formComAula) formComAula.style.display = usuarioEstaImpedidoDe('comentar') ? 'none' : 'block';
+        }
+
+        let quizTodasPerguntasCache = [], quizPerguntasAtivas = [], quizIndiceAtual = 0, quizTimerInterval = null, pontuacaoSessaoQuiz = 0;
+        function carregarDadosQuiz() {
+            apiFetch({ action: 'obter_quiz_dados', matricula: session.matricula }).then(data => {
+                if (data.status === 'sucesso') {
+                    if (session.classe === 'monitor') { document.getElementById('quiz-execucao-aluno').style.display = 'none'; document.getElementById('quiz-painel-monitor').style.display = 'block'; renderizarRanking(data.ranking || []); carregarPerguntasQuiz();
+                    } else {
+                        document.getElementById('quiz-painel-monitor').style.display = 'none';
+                        if (data.visibilidade === 'sim') {
+                            document.getElementById('quiz-execucao-aluno').style.display = 'block'; window.quizTempoLimiteMin = Number(data.tempo) || 5;
+                            if (data.finalizado) { document.getElementById('quiz-execucao-aluno').innerHTML = `<h3 style="color:var(--danger-color);">Quiz Concluído e Bloqueado</h3><p style="color:var(--text-muted); margin-top:10px;">Você já concluiu sua sessão de quiz. Um e-mail com a revisão dos erros foi enviado para ${session.email}.</p>`;
+                            } else {
+                                quizTodasPerguntasCache = data.perguntas || []; let respondidas = data.respondidas || []; let naoRespondidas = quizTodasPerguntasCache.filter(p => respondidas.indexOf(p.id) === -1);
+                                let selectCat = document.getElementById('select-categoria-aluno'); selectCat.innerHTML = ''; let catsDisponiveis = [...new Set(naoRespondidas.map(p => p.categoria))];
+                                if (catsDisponiveis.length === 0) { document.getElementById('quiz-execucao-aluno').innerHTML = `<h3 style="color:var(--success-color);">Todas as Questões Respondidas!</h3><p style="color:var(--text-muted); margin-top:10px;">Você já respondeu a todas as perguntas disponíveis.</p>`; } else { catsDisponiveis.forEach(cat => { selectCat.innerHTML += `<option value="${cat}">${cat}</option>`; }); }
+                            }
+                        } else { document.getElementById('quiz-execucao-aluno').innerHTML = `<h3 style="color:var(--danger-color);">Quiz Indisponível</h3><p style="color:var(--text-muted);">Aguarde a liberação pelo monitor.</p>`; document.getElementById('quiz-execucao-aluno').style.display = 'block'; }
+                    }
+                }
+            });
+        }
+
+        function salvarEIniciarQuiz(status) { let tempo = document.getElementById('quiz-tempo-input').value; apiFetch({ action: 'salvar_quiz_config', visibilidade: status, categorias: '', tempo: tempo }).then(data => { showToast(data.mensagem); carregarDadosQuiz(); }); }
+        function abrirModalResponderQuiz() {
+            let catEscolhida = document.getElementById('select-categoria-aluno').value; if (!catEscolhida) { showToast("Selecione uma categoria válida.", true); return; }
+            apiFetch({ action: 'obter_quiz_dados', matricula: session.matricula }).then(data => {
+                let respondidas = data.respondidas || []; quizPerguntasAtivas = quizTodasPerguntasCache.filter(p => p.categoria === catEscolhida && respondidas.indexOf(p.id) === -1);
+                if (quizPerguntasAtivas.length === 0) { showToast("Você já respondeu todas as perguntas desta categoria.", true); carregarDadosQuiz(); return; }
+                quizIndiceAtual = 0; pontuacaoSessaoQuiz = 0; iniciarCronometroQuiz(window.quizTempoLimiteMin * 60); exibirPerguntaModal(); document.getElementById('modal-responder-quiz').style.display = 'flex';
+            });
+        }
+        function tentarFecharModalQuiz() { abrirModalConfirmacao("Se fechar o quiz agora, ele será bloqueado e um relatório dos erros será enviado. Deseja encerrar?", () => { finalizarQuizDefinitivamente(); }); }
+        function finalizarQuizDefinitivamente() { if (quizTimerInterval) clearInterval(quizTimerInterval); apiFetch({ action: 'finalizar_quiz_aluno', matricula: session.matricula, email: session.email, nome: session.nome }).then(() => { document.getElementById('modal-responder-quiz').style.display = 'none'; carregarDadosQuiz(); showToast("Quiz finalizado. Relatório enviado.", true); }).catch(() => { document.getElementById('modal-responder-quiz').style.display = 'none'; carregarDadosQuiz(); }); }
+        function iniciarCronometroQuiz(segundosTotais) {
+            if (quizTimerInterval) clearInterval(quizTimerInterval); let tempoRestante = segundosTotais; let timerDisplay = document.getElementById('quiz-timer-display');
+            quizTimerInterval = setInterval(() => { let min = Math.floor(tempoRestante / 60); let sec = tempoRestante % 60; timerDisplay.textContent = `Tempo Restante: ${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`; if (tempoRestante <= 0) { clearInterval(quizTimerInterval); finalizarQuizDefinitivamente(); showToast("O tempo acabou!", true); } tempoRestante--; }, 1000);
+        }
+
+        function exibirPerguntaModal() {
+            if (quizIndiceAtual >= quizPerguntasAtivas.length) {
+                if (quizTimerInterval) clearInterval(quizTimerInterval); document.getElementById('quiz-modal-titulo').textContent = "Categoria Concluída!"; document.getElementById('quiz-timer-display').textContent = ""; document.getElementById('quiz-modal-pergunta').textContent = `Você acumulou ${pontuacaoSessaoQuiz} pontos! E-mail com revisão será enviado.`;
+                document.getElementById('quiz-modal-opcoes').innerHTML = ""; document.getElementById('quiz-feedback-box').style.display = 'none'; document.getElementById('btn-proxima-questao').style.display = 'block'; document.getElementById('btn-proxima-questao').textContent = "Concluir e Sair"; document.getElementById('btn-proxima-questao').onclick = () => { finalizarQuizDefinitivamente(); }; return;
+            }
+            let q = quizPerguntasAtivas[quizIndiceAtual]; document.getElementById('quiz-modal-titulo').textContent = `Questão ${quizIndiceAtual + 1} de ${quizPerguntasAtivas.length} [${q.categoria}]`; document.getElementById('quiz-modal-pergunta').textContent = q.enunciado; let opContainer = document.getElementById('quiz-modal-opcoes'); opContainer.innerHTML = ''; document.getElementById('quiz-feedback-box').style.display = 'none'; document.getElementById('btn-proxima-questao').style.display = 'none';
+            ['Verdadeiro', 'Falso'].forEach(val => { let letra = val === 'Verdadeiro' ? 'V' : 'F'; let btn = document.createElement('button'); btn.className = 'btn-submit btn-opcao-quiz'; btn.style.background = 'var(--container-card)'; btn.style.border = '1px solid var(--input-border)'; btn.textContent = val; btn.onclick = () => { document.querySelectorAll('.btn-opcao-quiz').forEach(b => b.disabled = true); enviarRespostaBackend(q.id, letra); }; opContainer.appendChild(btn); });
+        }
+
+        function enviarRespostaBackend(perguntaId, respostaLetra) {
+            apiFetch({ action: 'responder_pergunta_quiz', matricula: session.matricula, pergunta_id: perguntaId, resposta: respostaLetra }).then(data => {
+                if (data.status === 'sucesso') {
+                    if (data.acertou) pontuacaoSessaoQuiz += 10;
+                    let fb = document.getElementById('quiz-feedback-box'); fb.style.display = 'block';
+                    if (data.acertou) { fb.style.backgroundColor = 'rgba(16, 185, 129, 0.15)'; fb.style.border = '1px solid var(--success-color)'; fb.style.color = '#34d399'; fb.innerHTML = `<strong>Resposta Correta! (+10 pts)</strong><br><span style="font-weight:400; font-size:13px; color:var(--text-main); margin-top:6px; display:block;">${data.explicacao}</span>`; } else { fb.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; fb.style.border = '1px solid var(--danger-color)'; fb.style.color = '#f87171'; fb.innerHTML = `<strong>Incorreta. (Gabarito: ${data.gabarito === 'V' ? 'Verdadeiro' : 'Falso'})</strong><br><span style="font-weight:400; font-size:13px; color:var(--text-main); margin-top:6px; display:block;">${data.explicacao}</span>`; }
+                    document.getElementById('btn-proxima-questao').style.display = 'block'; document.getElementById('btn-proxima-questao').textContent = "Próxima Questão"; document.getElementById('btn-proxima-questao').onclick = () => { quizIndiceAtual++; exibirPerguntaModal(); };
+                } else { showToast(data.mensagem, true); }
+            });
+        }
+        function renderizarRanking(rankingList) { let tbody = document.getElementById('ranking-tbody'); tbody.innerHTML = ''; if (rankingList.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Nenhuma pontuação registrada.</td></tr>'; return; } rankingList.forEach((r, index) => { tbody.innerHTML += `<tr><td>${index + 1}º</td><td>${r.matricula}</td><td>${r.nome}</td><td><strong>${r.pontuacao} pts</strong></td></tr>`; }); }
+
+        let cachePerguntasQuiz = [];
+        function escaparHtml(texto) { const d = document.createElement('div'); d.textContent = texto || ''; return d.innerHTML; }
+        function carregarPerguntasQuiz() {
+            apiFetch({ action: 'listar_perguntas_quiz', classe: session.classe }).then(data => {
+                cachePerguntasQuiz = data.perguntas || [];
+                const container = document.getElementById('lista-perguntas-quiz-container'); container.innerHTML = '';
+                if (cachePerguntasQuiz.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Nenhuma pergunta cadastrada ainda.</p>'; return; }
+                cachePerguntasQuiz.forEach(p => {
+                    let card = document.createElement('div');
+                    card.className = 'solicitacao-card';
+                    card.style.flexDirection = 'column'; card.style.alignItems = 'flex-start'; card.style.gap = '10px';
+                    card.innerHTML = `<div style="width:100%;"><span style="background:var(--primary-color); color:#fff; font-size:12px; font-weight:700; padding:3px 10px; border-radius: 20px;">${escaparHtml(p.categoria)}</span><span style="margin-left:10px; font-size:12px; font-weight:700; color:${p.gabarito === 'V' ? 'var(--success-color)' : 'var(--danger-color)'};">Gabarito: ${p.gabarito === 'V' ? 'Verdadeiro' : 'Falso'}</span><p style="margin-top:10px; font-weight:600; line-height:1.5;">${escaparHtml(p.enunciado)}</p><p style="margin-top:6px; font-size:13px; color:var(--text-muted); line-height:1.4;">${escaparHtml(p.explicacao)}</p></div><div class="solicitacao-actions"><button class="btn-text-action" onclick="abrirModalEditarPergunta('${p.id}')">Editar</button><button class="btn-negar" onclick="confirmarExclusaoPergunta('${p.id}')">Excluir</button></div>`;
+                    container.appendChild(card);
+                });
+            });
+        }
+
+        document.getElementById('btn-abrir-modal-pergunta').addEventListener('click', () => { document.getElementById('form-pergunta-quiz').reset(); document.getElementById('perg-id').value = ''; document.getElementById('titulo-modal-pergunta').textContent = 'Nova Pergunta'; document.getElementById('modal-pergunta-quiz').style.display = 'flex'; });
+
+        function abrirModalEditarPergunta(id) { let p = cachePerguntasQuiz.find(item => item.id === id); if (!p) return; document.getElementById('perg-id').value = p.id; document.getElementById('perg-categoria').value = p.categoria; document.getElementById('perg-enunciado').value = p.enunciado; document.getElementById('perg-gabarito').value = p.gabarito; document.getElementById('perg-explicacao').value = p.explicacao; document.getElementById('titulo-modal-pergunta').textContent = 'Editar Pergunta'; document.getElementById('modal-pergunta-quiz').style.display = 'flex'; }
+
+        function confirmarExclusaoPergunta(id) { abrirModalConfirmacao('Tem certeza que deseja excluir esta pergunta? Essa ação não pode ser desfeita.', () => { apiFetch({ action: 'deletar_pergunta_quiz', classe: session.classe, id: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarPerguntasQuiz(); }); }); }
+
+        document.getElementById('form-pergunta-quiz').addEventListener('submit', e => {
+            e.preventDefault();
+            let id = document.getElementById('perg-id').value;
+            let payload = { action: id ? 'editar_pergunta_quiz' : 'cadastrar_pergunta_quiz', classe: session.classe, id: id, categoria: document.getElementById('perg-categoria').value, enunciado: document.getElementById('perg-enunciado').value, gabarito: document.getElementById('perg-gabarito').value, explicacao: document.getElementById('perg-explicacao').value };
+            apiFetch(payload).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-pergunta-quiz').style.display = 'none'; carregarPerguntasQuiz(); } });
+        });
+
+        function carregarModulos() {
+            apiFetch({ action: 'listar_modulos', classe: session.classe }).then(data => {
+                const list = document.getElementById('module-list'); list.innerHTML = '';
+                (data.modulos || []).forEach(mod => {
+                    let li = document.createElement('li'); li.className = 'module-item'; if (currentContext.modulo_id === mod.id_modulo) li.classList.add('active'); li.innerHTML = `<span>${mod.nome}</span>`;
+                    li.onclick = () => { document.querySelectorAll('.module-item').forEach(el => el.classList.remove('active')); li.classList.add('active'); currentContext.modulo_id = mod.id_modulo; currentContext.modulo_nome = mod.nome; currentContext.modulo_desc = mod.descricao; currentContext.modulo_oculto = mod.oculto; document.getElementById('view-modulo').style.display = 'block'; document.getElementById('view-aula').style.display = 'none'; document.getElementById('titulo-modulo-selecionado').textContent = mod.nome; document.getElementById('desc-modulo-selecionado').textContent = mod.descricao; if (session.classe === 'monitor') { document.getElementById('btn-editar-modulo').style.display = 'inline-block'; document.getElementById('btn-deletar-modulo').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-aula').style.display = 'inline-block'; } carregarAulas(); };
+                    list.appendChild(li);
+                });
+            });
+        }
+
+        let cacheAulasDoModulo = [];
+        function carregarAulas() {
+            document.getElementById('busca-aulas').value = '';
+            apiFetch({ action: 'obter_aulas_concluidas', matricula: session.matricula }).then(resConcluidas => {
+                cacheAulasConcluidas = resConcluidas.aulas_concluidas || [];
+                apiFetch({ action: 'listar_aulas', id_modulo: currentContext.modulo_id }).then(data => { cacheAulasDoModulo = data.aulas || []; renderizarAulas(cacheAulasDoModulo); });
+            });
+        }
+        function extrairIdGoogleDrive(url) { if (!url) return null; let u = extrairSrc(url); try { if (u.includes('/file/d/')) return u.split('/file/d/')[1].split('/')[0]; if (u.includes('drive.google.com/open?id=')) return u.split('id=')[1].split('&')[0]; if (u.includes('drive.google.com/uc?id=')) return u.split('id=')[1].split('&')[0]; } catch(e) {} return null; }
+        
+        function renderizarAulas(listaAulas) {
+            let ehMonitor = (session.classe === 'monitor'); const grid = document.getElementById('aulas-grid'); grid.innerHTML = '';
+            if (!listaAulas || listaAulas.length === 0) { grid.innerHTML = '<p style="color:var(--text-muted);">Nenhuma aula encontrada.</p>'; return; }
+            listaAulas.forEach((aula) => {
+                let indexReal = cacheAulasDoModulo.indexOf(aula); let card = document.createElement('div'); card.className = 'aula-card';
+                let liberada = ehMonitor || indexReal === 0 || cacheAulasConcluidas.includes(cacheAulasDoModulo[indexReal - 1].aula_id); let jaConcluida = cacheAulasConcluidas.includes(aula.aula_id);
+                let ytId = obterIdYoutube(aula.link); let driveId = !ytId ? extrairIdGoogleDrive(aula.link) : null;
+                let thumbStyle = ytId ? `background-image: url('https://img.youtube.com/vi/${ytId}/hqdefault.jpg');` : (driveId ? `background-image: url('https://drive.google.com/thumbnail?id=${driveId}&sz=w500');` : '');
+                let editButtonsHTML = (ehMonitor) ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarAula('${escapeParaJS(aula.aula_id)}', '${escapeParaJS(aula.nome_aula)}', '${escapeParaJS(aula.link)}', '${escapeParaJS(aula.descricao)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarAula('${escapeParaJS(aula.aula_id)}')">Excluir</button></div>` : '';
+                let badgeConcluidaHTML = jaConcluida ? `<div class="aula-badge-concluida">✓ Concluída</div>` : ''; let playOrLockIconHTML = liberada ? `<div class="aula-card-play-icon">▶</div>` : `<div class="aula-card-lock-icon">🔒</div>`;
+                if (!liberada) card.classList.add('locked');
+                card.innerHTML = `${badgeConcluidaHTML}<div class="aula-card-thumb" style="${thumbStyle}">${playOrLockIconHTML}</div><div class="aula-card-body"><h4>${aula.nome_aula}</h4><p>${aula.descricao || ''}</p></div>${editButtonsHTML}`;
+                card.onclick = () => {
+                    if (!liberada) { showToast("Conclua a aula anterior para desbloquear esta!", true); return; }
+                    currentContext.aula_id = aula.aula_id; document.getElementById('view-modulo').style.display = 'none'; document.getElementById('view-aula').style.display = 'block'; document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula; document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao); document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
+                    let btnConcluir = document.getElementById('btn-concluir-aula');
+                    if (session.classe === 'monitor') { btnConcluir.style.display = 'none'; } else {
+                        btnConcluir.style.display = 'inline-flex'; atualizarEstadoBotaoConcluir(aula.aula_id);
+                        btnConcluir.onclick = () => { btnConcluir.disabled = true; apiFetch({ action: 'marcar_aula_concluida', matricula: session.matricula, aula_id: aula.aula_id }).then(res => { btnConcluir.disabled = false; if (res.status === 'sucesso') { if (!cacheAulasConcluidas.includes(aula.aula_id)) { cacheAulasConcluidas.push(aula.aula_id); } atualizarEstadoBotaoConcluir(aula.aula_id); showToast("Aula registrada como concluída!"); } else { showToast("Erro ao registrar.", true); } }).catch(() => { btnConcluir.disabled = false; showToast("Erro de conexão.", true); }); };
+                    } carregarComentariosAula();
+                }; grid.appendChild(card);
+            });
+        }
+        document.getElementById('busca-aulas').addEventListener('input', function() { let termo = this.value.trim().toLowerCase(); let filtradas = termo ? cacheAulasDoModulo.filter(a => (a.nome_aula || '').toLowerCase().includes(termo)) : cacheAulasDoModulo; renderizarAulas(filtradas); });
+        function atualizarEstadoBotaoConcluir(aulaId) { let btnConcluir = document.getElementById('btn-concluir-aula'); if (cacheAulasConcluidas.includes(aulaId)) { btnConcluir.className = 'btn-concluir concluida'; btnConcluir.innerHTML = '<span>✓</span> Aula Concluída'; } else { btnConcluir.className = 'btn-concluir'; btnConcluir.innerHTML = '<span>✓</span> Marcar como Concluída'; } }
+        function abrirModalEditarAula(id, nome, link, desc) { document.getElementById('aula-id').value = id; document.getElementById('aula-nome').value = nome; document.getElementById('aula-link').value = link; document.getElementById('aula-desc').value = desc; document.getElementById('titulo-modal-aula').textContent = 'Editar Aula'; document.getElementById('modal-aula').style.display = 'flex'; }
+        function deletarAula(id) { abrirModalConfirmacao("Tem certeza que deseja excluir esta aula?", () => { apiFetch({ action: 'deletar_aula', aula_id: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarAulas(); }); }); }
+        document.getElementById('btn-voltar-modulo').addEventListener('click', () => { document.getElementById('iframe-video').src = ''; document.getElementById('view-aula').style.display = 'none'; document.getElementById('view-modulo').style.display = 'block'; carregarAulas(); });
+        document.getElementById('form-add-modulo').addEventListener('submit', e => { e.preventDefault(); let modId = document.getElementById('mod-id').value; apiFetch({ action: modId ? 'editar_modulo' : 'cadastrar_modulo', id_modulo: modId, nome: document.getElementById('mod-nome').value, descricao: document.getElementById('mod-desc').value, oculto: document.getElementById('mod-oculto').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-modulo').style.display = 'none'; carregarModulos(); }); });
+        document.getElementById('form-add-aula').addEventListener('submit', e => { e.preventDefault(); let aulaId = document.getElementById('aula-id').value; apiFetch({ action: aulaId ? 'editar_aula' : 'cadastrar_aula', aula_id: aulaId, id_modulo: currentContext.modulo_id, nome_aula: document.getElementById('aula-nome').value || 'Aula', link: document.getElementById('aula-link').value, descricao: document.getElementById('aula-desc').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-aula').style.display = 'none'; carregarAulas(); }); });
+
+        function abrirPlayerFilme(driveId, titulo) { document.getElementById('titulo-player-filme').textContent = titulo || 'Filme'; document.getElementById('iframe-player-filme').src = 'https://drive.google.com/file/d/' + driveId + '/preview?autoplay=1'; document.getElementById('modal-player-filme').style.display = 'flex'; }
+        function fecharPlayerFilme() { document.getElementById('modal-player-filme').style.display = 'none'; document.getElementById('iframe-player-filme').src = ''; }
+        let cacheFilmes = [];
+        function carregarFilmes() {
+            document.getElementById('btn-abrir-modal-filme').style.display = (session.classe === 'monitor') ? 'inline-block' : 'none';
+            const buscaWrapper = document.getElementById('filmes-busca-wrapper');
+            apiFetch({ action: 'listar_filmes', classe: session.classe, matricula: session.matricula }).then(data => {
+                const grid = document.getElementById('filmes-grid'); const avisoBox = document.getElementById('filmes-bloqueado-aviso');
+                if (data.bloqueado) { avisoBox.style.display = 'block'; avisoBox.textContent = data.motivo; grid.innerHTML = ''; buscaWrapper.style.display = 'none'; return; }
+                avisoBox.style.display = 'none';
+                cacheFilmes = data.filmes || [];
+                buscaWrapper.style.display = cacheFilmes.length > 4 ? 'block' : 'none';
+                document.getElementById('filmes-busca-input').value = '';
+                renderizarGridFilmes(cacheFilmes);
+            });
+        }
+        function renderizarGridFilmes(lista, mensagemVazio) {
+            const grid = document.getElementById('filmes-grid'); grid.innerHTML = '';
+            if (!lista || lista.length === 0) { grid.innerHTML = `<p style="color:var(--text-muted);">${mensagemVazio || 'Nenhum filme disponível ainda.'}</p>`; return; }
+            lista.forEach(f => {
+                let card = document.createElement('div'); card.className = 'aula-card';
+                let editHTML = (session.classe === 'monitor') ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarFilme('${escapeParaJS(f.id)}','${escapeParaJS(f.titulo)}','${escapeParaJS(f.drive_id)}','${escapeParaJS(f.capa)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarFilme('${escapeParaJS(f.id)}')">Excluir</button></div>` : '';
+                card.innerHTML = `<div class="aula-card-thumb" style="background-image:url('${f.capa}');"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${f.titulo}</h4></div>${editHTML}`;
+                card.onclick = () => { abrirPlayerFilme(f.drive_id, f.titulo); }; grid.appendChild(card);
+            });
+        }
+        function filtrarFilmes() {
+            const termo = document.getElementById('filmes-busca-input').value.trim().toLowerCase();
+            if (!termo) { renderizarGridFilmes(cacheFilmes); return; }
+            const filtrados = cacheFilmes.filter(f => (f.titulo || '').toLowerCase().includes(termo));
+            renderizarGridFilmes(filtrados, 'Nenhum filme encontrado com esse título.');
+        }
+        document.getElementById('btn-abrir-modal-filme').addEventListener('click', () => { document.getElementById('form-add-filme').reset(); document.getElementById('filme-id').value = ''; document.getElementById('titulo-modal-filme').textContent = 'Novo Filme'; document.getElementById('modal-filme').style.display = 'flex'; });
+        function abrirModalEditarFilme(id, titulo, driveId, capaUrl) { document.getElementById('filme-id').value = id; document.getElementById('filme-titulo').value = titulo; document.getElementById('filme-drive-id').value = driveId; document.getElementById('filme-capa-url').value = (capaUrl && !capaUrl.includes("drive.google.com/thumbnail")) ? capaUrl : ''; document.getElementById('titulo-modal-filme').textContent = 'Editar Filme'; document.getElementById('modal-filme').style.display = 'flex'; }
+        function deletarFilme(id) { abrirModalConfirmacao("Excluir filme?", () => { apiFetch({ action: 'deletar_filme', id_filme: id, classe: session.classe }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarFilmes(); }); }); }
+        document.getElementById('form-add-filme').addEventListener('submit', e => { e.preventDefault(); let filmeId = document.getElementById('filme-id').value; apiFetch({ action: filmeId ? 'editar_filme' : 'cadastrar_filme', id_filme: filmeId, titulo: document.getElementById('filme-titulo').value, drive_id: document.getElementById('filme-drive-id').value, capa_url: document.getElementById('filme-capa-url').value, classe: session.classe }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-filme').style.display = 'none'; carregarFilmes(); } }); });
+
+        function carregarComentariosAula() { apiFetch({ action: 'listar_comentarios', modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { const list = document.getElementById('comments-list-aula'); list.innerHTML = ''; cacheComentariosAula = data.comentarios || []; if (cacheComentariosAula.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma dúvida cadastrada.</p>'; return; } cacheComentariosAula.forEach((c, idx) => { let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioAula(${idx})">Excluir</button>` : ''; list.innerHTML += `<div class="comment-item"><div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}</span>${deleteBtn}</div><div class="comment-text">${c.comentario}</div></div></div>`; }); }); }
+        document.getElementById('form-comentario-aula').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', nome: session.nome, matricula: session.matricula, comentario: document.getElementById('texto-comentario-aula').value, modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-aula').value = ''; carregarComentariosAula(); }); });
+        function deletarComentarioAula(idx) { let c = cacheComentariosAula[idx]; abrirModalConfirmacao("Excluir comentário?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.modulo_id, aula: currentContext.aula_id, comentario: c.comentario }).then(() => carregarComentariosAula()); }); }
+
+        function carregarTopicosForum() { 
+            if (cacheTopicosForum) { renderizarTopicosForum(); }
+            apiFetch({ action: 'listar_topicos_forum' }).then(data => { cacheTopicosForum = (data.topicos || []).reverse(); renderizarTopicosForum(); }); 
+        }
+        function renderizarTopicosForum() { const container = document.getElementById('forum-topicos-container'); const termo = (document.getElementById('busca-forum').value || '').trim().toLowerCase(); const listaFiltrada = termo ? cacheTopicosForum.filter(t => (t.nome_forum || '').toLowerCase().includes(termo)) : (cacheTopicosForum || []); container.innerHTML = ''; if (listaFiltrada.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:30px;">${termo ? 'Nenhum tópico encontrado para "' + termo + '".' : 'Nenhum tópico.'}</p>`; return; } listaFiltrada.forEach((t) => { let idx = cacheTopicosForum.indexOf(t); let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === t.autor_matricula.toString()) ? `<button class="btn-text-action danger" onclick="event.stopPropagation(); deletarTopicoForum(${idx})">Excluir</button>` : ''; container.innerHTML += `<div class="forum-topico-card"><div class="forum-topico-header"><div class="forum-topico-title" onclick='abrirTopicoForum(${idx})'>${t.nome_forum}</div>${deleteBtn}</div><div class="forum-topico-meta">Por: ${t.autor_nome} • ${t.data_criacao}</div><p class="forum-topico-texto">${t.texto}</p></div>`; }); }
+        document.getElementById('busca-forum').addEventListener('input', renderizarTopicosForum);
+        function abrirTopicoForum(idx) { let topico = cacheTopicosForum[idx]; currentContext.forum_topico_id = topico.id_forum; document.getElementById('view-forum-lista').style.display = 'none'; document.getElementById('view-forum-topico').style.display = 'block'; document.getElementById('detalhe-topico-titulo').textContent = topico.nome_forum; document.getElementById('detalhe-topico-meta').textContent = `Por: ${topico.autor_nome} • ${topico.data_criacao}`; document.getElementById('detalhe-topico-texto').textContent = topico.texto; carregarComentariosForum(); }
+        document.getElementById('btn-voltar-forum').addEventListener('click', () => { document.getElementById('view-forum-topico').style.display = 'none'; document.getElementById('view-forum-lista').style.display = 'block'; });
+        document.getElementById('form-add-topico').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'cadastrar_topico_forum', nome_forum: document.getElementById('topico-titulo').value, texto: document.getElementById('topico-texto').value, nome: session.nome, matricula: session.matricula }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-topico-forum').style.display = 'none'; carregarTopicosForum(); } }); });
+        function deletarTopicoForum(idx) { let t = cacheTopicosForum[idx]; abrirModalConfirmacao("Excluir tópico?", () => { apiFetch({ action: 'deletar_topico_forum', id_forum: t.id_forum }).then(() => { document.getElementById('view-forum-topico').style.display = 'none'; document.getElementById('view-forum-lista').style.display = 'block'; carregarTopicosForum(); }); }); }
+
+        function carregarComentariosForum() { apiFetch({ action: 'listar_comentarios', modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { const list = document.getElementById('comments-list-forum'); list.innerHTML = ''; cacheComentariosForum = data.comentarios || []; if (cacheComentariosForum.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma resposta.</p>'; return; } cacheComentariosForum.forEach((c, idx) => { let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioForum(${idx})">Excluir</button>` : ''; list.innerHTML += `<div class="comment-item"><div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}</span>${deleteBtn}</div><div class="comment-text">${c.comentario}</div></div></div>`; }); }); }
+        document.getElementById('form-comentario-forum').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', nome: session.nome, matricula: session.matricula, comentario: document.getElementById('texto-comentario-forum').value, modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-forum').value = ''; carregarComentariosForum(); }); });
+        function deletarComentarioForum(idx) { let c = cacheComentariosForum[idx]; abrirModalConfirmacao("Excluir resposta?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.forum_topico_id, aula: 'forum', comentario: c.comentario }).then(() => carregarComentariosForum()); }); }
+
+        function carregarEExibirMonitores() {
+            const container = document.getElementById('monitores-horarios-container'); 
+            if (!cacheMonitores) container.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Carregando...</p>';
+            apiFetch({ action: 'listar_monitores' }).then(data => { 
+                cacheMonitores = data.monitores || []; 
+                container.innerHTML = ''; 
+                cacheMonitores.forEach(m => { 
+                    const h = m.horarios || { segunda: '-', terca: '-', quarta: '-', quinta: '-', sexta: '-', sala: '-' }; 
+                    const btnEditHTML = (session.classe === 'monitor') ? `<button class="btn-text-action" onclick="abrirModalEditarHorario('${m.email}', '${h.sala}', '${h.segunda}', '${h.terca}', '${h.quarta}', '${h.quinta}', '${h.sexta}')">Editar Horário</button>` : ''; 
+                    container.innerHTML += `<div class="monitor-card"><div class="monitor-card-header"><div><div class="monitor-nome">${m.nome}</div><div style="color:var(--text-muted); font-size:14px; margin-top:4px;">${m.email}</div></div>${btnEditHTML}</div><div style="margin-bottom:12px;"><strong>Sala:</strong> ${h.sala}</div><div class="schedule-table-wrapper"><table class="schedule-table"><thead><tr><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th></tr></thead><tbody><tr><td>${formatarHorario(h.segunda)}</td><td>${formatarHorario(h.terca)}</td><td>${formatarHorario(h.quarta)}</td><td>${formatarHorario(h.quinta)}</td><td>${formatarHorario(h.sexta)}</td></tr></tbody></table></div></div>`; 
+                }); 
+            });
+        }
+        function abrirModalEditarHorario(email, sala, seg, ter, qua, qui, sex) { document.getElementById('edit-horario-email').value = email; document.getElementById('edit-sala').value = sala !== '-' ? sala : ''; document.getElementById('edit-segunda').value = seg !== '-' ? seg : ''; document.getElementById('edit-terca').value = ter !== '-' ? ter : ''; document.getElementById('edit-quarta').value = qua !== '-' ? qua : ''; document.getElementById('edit-quinta').value = qui !== '-' ? qui : ''; document.getElementById('edit-sexta').value = sex !== '-' ? sex : ''; document.getElementById('modal-editar-horario').style.display = 'flex'; }
+        document.getElementById('form-editar-horario').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'salvar_horario', email_monitor: document.getElementById('edit-horario-email').value, sala: document.getElementById('edit-sala').value, segunda: document.getElementById('edit-segunda').value, terca: document.getElementById('edit-terca').value, quarta: document.getElementById('edit-quarta').value, quinta: document.getElementById('edit-quinta').value, sexta: document.getElementById('edit-sexta').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-editar-horario').style.display = 'none'; carregarEExibirMonitores(); }); });
+
+        function prepararTelaAtendimento() { 
+            if (session.classe === 'monitor') { document.getElementById('view-atendimento-aluno').style.display = 'none'; document.getElementById('view-atendimento-monitor').style.display = 'block'; carregarSolicitacoesPendentesMonitor(); 
+            } else { 
+                document.getElementById('view-atendimento-aluno').style.display = 'block'; document.getElementById('view-atendimento-monitor').style.display = 'none'; 
+                let select = document.getElementById('atendimento-monitor');
+                apiFetch({ action: 'listar_monitores' }).then(data => { select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>'; (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${m.nome}">${m.nome}</option>`; }); });
+            } 
+        }
+        function carregarSolicitacoesPendentesMonitor() { 
+            apiFetch({ action: 'listar_solicitacoes_pendentes' }).then(data => { 
+                const container = document.getElementById('solicitacoes-pendentes-container'); container.innerHTML = ''; 
+                if (data.status === 'erro') { showToast(data.mensagem, true); return; }
+                if (data.solicitacoes && data.solicitacoes.length > 0) { data.solicitacoes.reverse().forEach(sol => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${sol.nome} (${sol.matricula})</h3><p>Curso: ${sol.curso} - Fase: ${sol.fase}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="processarSolicitacao('${sol.id}', 'APROVAR')">Aprovar</button><button class="btn-negar" onclick="processarSolicitacao('${sol.id}', 'NEGAR')">Negar</button></div></div>`; }); 
+                } else { container.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Nenhuma solicitação pendente.</p>'; } 
+            }); 
+        }
+        function processarSolicitacao(id, decisao) { apiFetch({ action: 'processar_solicitacao_atendimento', id_solicitacao: id, decisao: decisao }).then(data => { showToast(data.mensagem); carregarSolicitacoesPendentesMonitor(); }); }
+        document.getElementById('form-registro-atendimento').addEventListener('submit', e => { 
+            e.preventDefault(); let btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; btn.textContent = 'Solicitando...'; 
+            apiFetch({ action: 'solicitar_atendimento', matricula: session.matricula, nome: session.nome, email: session.email, curso: document.getElementById('atendimento-curso').value, fase_ano: document.getElementById('atendimento-fase-ano').value, monitor_nome: document.getElementById('atendimento-monitor').value })
+            .then(data => { showToast(data.mensagem); btn.disabled = false; btn.textContent = 'Solicitar Atendimento'; document.getElementById('form-registro-atendimento').reset(); }); 
+        });
+
+        document.getElementById('form-salvar-aviso').addEventListener('submit', e => { e.preventDefault(); let btn = document.getElementById('btn-submit-aviso'); btn.textContent = 'Enviando...'; btn.disabled = true; apiFetch({ action: 'salvar_alerta', aviso: document.getElementById('input-texto-aviso').value }).then(data => { showToast(data.mensagem); document.getElementById('input-texto-aviso').value = ''; btn.textContent = 'Publicar e Enviar por E-mail'; btn.disabled = false; }).catch(() => { showToast('Houve um erro na requisição.', true); btn.textContent = 'Publicar e Enviar por E-mail'; btn.disabled = false; }); });
+        document.getElementById('form-convidar-visitante').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'convidar_visitante', nome: document.getElementById('convite-nome').value, email: document.getElementById('convite-email').value }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') document.getElementById('form-convidar-visitante').reset(); }); });
+        document.getElementById('form-banir-usuario').addEventListener('submit', e => { e.preventDefault(); let matricula = document.getElementById('ban-matricula').value, tipo = document.getElementById('ban-tipo').value; abrirModalConfirmacao(`Confirma o banimento ${tipo.toUpperCase()} da matrícula ${matricula}?`, () => { apiFetch({ action: 'banir_usuario', matricula: matricula, tipo: tipo, motivo: document.getElementById('ban-motivo').value }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('form-banir-usuario').reset(); carregarBanidos(); } }); }); });
+        function carregarBanidos() { if (session.classe !== 'monitor') return; apiFetch({ action: 'listar_banidos' }).then(data => { const container = document.getElementById('lista-banidos-container'); if (!container) return; container.innerHTML = ''; if (!data.banidos || data.banidos.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Nenhum usuário banido.</p>'; return; } data.banidos.forEach(b => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${b.matricula} — ${b.tipo.toUpperCase()}</h3><p>${b.motivo || 'Sem motivo informado.'}${b.tipo === 'corretivo' ? ' • Até ' + b.data_fim : ''}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="desbanirUsuario('${escapeParaJS(b.matricula)}')">Remover Ban</button></div></div>`; }); }); }
+        function desbanirUsuario(matricula) { abrirModalConfirmacao("Remover o banimento deste usuário?", () => { apiFetch({ action: 'desbanir_usuario', matricula: matricula }).then(data => { showToast(data.mensagem); carregarBanidos(); }); }); }
+        
+        document.getElementById('form-alt-senha').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'alterar_senha', matricula: session.matricula, nova_senha: document.getElementById('pass-nova').value }).then(data => { showToast(data.mensagem); session.senha_alterada = 'sim'; document.getElementById('modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; localStorage.setItem('monitoria_session', JSON.stringify(session)); }); });
+        document.getElementById('form-atualizar-perfil').addEventListener('submit', e => { e.preventDefault(); let novaFoto = document.getElementById('perfil-foto-url').value; apiFetch({ action: 'atualizar_perfil', matricula: session.matricula, foto_perfil: novaFoto }).then(data => { showToast(data.mensagem); session.foto_perfil = novaFoto; localStorage.setItem('monitoria_session', JSON.stringify(session)); document.getElementById('modal-perfil').style.display = 'none'; let avatarHeader = document.getElementById('display-user-avatar'); if (novaFoto) { avatarHeader.src = novaFoto; avatarHeader.style.display = 'block'; } }); });
+    </script>
+</body>
+</html>
