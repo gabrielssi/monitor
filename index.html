@@ -92,7 +92,7 @@
         .notification-item span { display: block; font-size: 11px; color: var(--text-muted); margin-top: 4px; }
         .notification-empty { padding: 20px; text-align: center; color: var(--text-muted); font-size: 13px; }
 
-        .btn-action-small { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; }
+        .btn-action-small { background: transparent; border: 1px solid var(--primary-color); color: var(--primary-color); padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; font-size: 13px; transition: 0.2s; }
         .btn-action-small:hover { background: var(--primary-color); color: #fff; }
         .btn-action-small.btn-danger { border-color: var(--danger-color); color: var(--danger-color); }
         .btn-action-small.btn-danger:hover { background-color: var(--danger-color); color: #ffffff; }
@@ -338,11 +338,22 @@
                     <button class="btn-voltar" id="btn-voltar-modulo">← Voltar para o módulo</button>
                     <div class="content-header"><h1 id="titulo-aula-selecionada">Título</h1></div>
                     <div class="video-container" id="video-box"><iframe id="iframe-video" src="" title="Player" allowfullscreen></iframe></div>
+                    
+                    <!-- DESCRIÇÃO DA AULA -->
                     <div class="description-box">
                         <h3 style="margin-bottom: 12px; font-size: 18px;">Sobre esta aula</h3>
                         <p id="desc-aula-selecionada" style="color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;"></p>
+                        
+                        <div id="box-anexo-aula" style="margin-top: 15px; display: none;">
+                            <a id="link-anexo-aula" href="#" target="_blank" class="btn-action-small" style="text-decoration: none; display: inline-flex; align-items: center; gap: 8px;">
+                                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> 
+                                Baixar Material de Apoio
+                            </a>
+                        </div>
+                        
                         <button id="btn-concluir-aula" class="btn-concluir" style="display:none;"><span>✓</span> Marcar como Concluída</button>
                     </div>
+
                     <div class="comments-section">
                         <h3 style="margin-bottom: 20px; font-size: 18px;">Dúvidas da Aula</h3>
                         <div class="comments-list" id="comments-list-aula"></div>
@@ -477,7 +488,21 @@
     <div class="modal-overlay" id="modal-senha"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-senha').style.display='none'">&times;</span><div class="header"><h1>Alterar Senha</h1></div><form id="form-alt-senha"><div class="form-group"><label>Nova Senha (mínimo 8 caracteres)</label><input type="password" id="pass-nova" minlength="8" required></div><button type="submit" class="btn-submit">Atualizar Senha</button></form></div></div>
     <div class="modal-overlay" id="modal-perfil"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-perfil').style.display='none'">&times;</span><div class="header"><h1>Foto de Perfil</h1></div><form id="form-atualizar-perfil"><div class="form-group"><label>URL da Foto</label><input type="url" id="perfil-foto-url" required></div><button type="submit" class="btn-submit">Salvar Perfil</button></form></div></div>
     <div class="modal-overlay" id="modal-modulo"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-modulo').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-modulo">Módulo</h1></div><form id="form-add-modulo"><input type="hidden" id="mod-id"><div class="form-group"><label>Nome</label><input type="text" id="mod-nome" required></div><div class="form-group"><label>Descrição</label><input type="text" id="mod-desc"></div><div class="form-group"><label>Ocultar para Alunos?</label><select id="mod-oculto"><option value="não">Não</option><option value="sim">Sim</option></select></div><button type="submit" class="btn-submit">Salvar Módulo</button></form></div></div>
-    <div class="modal-overlay" id="modal-aula"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-aula').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-aula">Aula</h1></div><form id="form-add-aula"><input type="hidden" id="aula-id"><div class="form-group"><label>Link ou Embed</label><textarea id="aula-link" required rows="3"></textarea></div><div class="form-group"><label>Título</label><input type="text" id="aula-nome"></div><div class="form-group"><label>Descrição</label><textarea id="aula-desc" rows="2"></textarea></div><button type="submit" class="btn-submit">Salvar Aula</button></form></div></div>
+    
+    <div class="modal-overlay" id="modal-aula">
+        <div class="modal-content">
+            <span class="close-modal" onclick="document.getElementById('modal-aula').style.display='none'">&times;</span>
+            <div class="header"><h1 id="titulo-modal-aula">Aula</h1></div>
+            <form id="form-add-aula">
+                <input type="hidden" id="aula-id">
+                <div class="form-group"><label>Link do Vídeo/Embed</label><textarea id="aula-link" required rows="2"></textarea></div>
+                <div class="form-group"><label>Título</label><input type="text" id="aula-nome"></div>
+                <div class="form-group"><label>Descrição</label><textarea id="aula-desc" rows="2"></textarea></div>
+                <div class="form-group"><label>Link do Anexo (Opcional)</label><input type="url" id="aula-anexo" placeholder="https://drive.google.com/... ou outro link de arquivo"></div>
+                <button type="submit" class="btn-submit">Salvar Aula</button>
+            </form>
+        </div>
+    </div>
     
     <div class="modal-overlay" id="modal-player-filme">
         <div class="modal-content" style="max-width: 950px; padding: 20px;">
@@ -617,10 +642,28 @@
                         apiFetch({ action: 'listar_aulas', id_modulo: mod.id_modulo }).then(dataAulas => {
                             cacheAulasDoModulo = dataAulas.aulas || []; let aula = cacheAulasDoModulo.find(a => a.aula_id === n.ref_aula);
                             if (!aula) { renderizarAulas(cacheAulasDoModulo); showToast('Aula não disponível.', true); return; }
-                            currentContext.aula_id = aula.aula_id; document.getElementById('view-modulo').style.display = 'none'; document.getElementById('view-aula').style.display = 'block';
-                            document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula; document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao); document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
-                            document.getElementById('btn-concluir-aula').style.display = (session.classe === 'monitor') ? 'none' : 'inline-flex'; if (session.classe !== 'monitor') atualizarEstadoBotaoConcluir(aula.aula_id);
-                            carregarComentariosAula(); setTimeout(() => { const el = document.getElementById('comments-list-aula'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
+                            
+                            // Abrir aula
+                            currentContext.aula_id = aula.aula_id; 
+                            document.getElementById('view-modulo').style.display = 'none'; 
+                            document.getElementById('view-aula').style.display = 'block';
+                            document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula; 
+                            document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao); 
+                            document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
+                            
+                            if (aula.anexo_url) {
+                                document.getElementById('box-anexo-aula').style.display = 'block';
+                                document.getElementById('link-anexo-aula').href = aula.anexo_url;
+                            } else {
+                                document.getElementById('box-anexo-aula').style.display = 'none';
+                                document.getElementById('link-anexo-aula').href = '#';
+                            }
+
+                            document.getElementById('btn-concluir-aula').style.display = (session.classe === 'monitor') ? 'none' : 'inline-flex'; 
+                            if (session.classe !== 'monitor') atualizarEstadoBotaoConcluir(aula.aula_id);
+                            
+                            carregarComentariosAula(); 
+                            setTimeout(() => { const el = document.getElementById('comments-list-aula'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
                         });
                     });
                 });
@@ -729,8 +772,15 @@
         document.getElementById('btn-abrir-modal-perfil').addEventListener('click', () => { document.getElementById('perfil-foto-url').value = session.foto_perfil || ''; document.getElementById('modal-perfil').style.display = 'flex'; });
         document.getElementById('btn-abrir-modal-topico').addEventListener('click', () => { document.getElementById('form-add-topico').reset(); document.getElementById('modal-topico-forum').style.display = 'flex'; });
         document.getElementById('btn-abrir-modal-modulo').addEventListener('click', () => { document.getElementById('form-add-modulo').reset(); document.getElementById('mod-id').value = ''; document.getElementById('titulo-modal-modulo').textContent = 'Novo Módulo'; document.getElementById('modal-modulo').style.display = 'flex'; });
-        document.getElementById('btn-abrir-modal-aula').addEventListener('click', () => { document.getElementById('form-add-aula').reset(); document.getElementById('aula-id').value = ''; document.getElementById('titulo-modal-aula').textContent = 'Nova Aula'; document.getElementById('modal-aula').style.display = 'flex'; });
         document.getElementById('btn-editar-modulo').addEventListener('click', () => { document.getElementById('mod-id').value = currentContext.modulo_id; document.getElementById('mod-nome').value = currentContext.modulo_nome; document.getElementById('mod-desc').value = currentContext.modulo_desc; document.getElementById('mod-oculto').value = currentContext.modulo_oculto; document.getElementById('titulo-modal-modulo').textContent = 'Editar Módulo'; document.getElementById('modal-modulo').style.display = 'flex'; });
+        
+        document.getElementById('btn-abrir-modal-aula').addEventListener('click', () => { 
+            document.getElementById('form-add-aula').reset(); 
+            document.getElementById('aula-id').value = ''; 
+            document.getElementById('aula-anexo').value = '';
+            document.getElementById('titulo-modal-aula').textContent = 'Nova Aula'; 
+            document.getElementById('modal-aula').style.display = 'flex'; 
+        });
 
         document.getElementById('btn-deletar-modulo').addEventListener('click', () => {
             abrirModalConfirmacao("Tem certeza que deseja excluir este módulo e todas as aulas dentro dele?", () => {
@@ -873,8 +923,6 @@
             });
         }
 
-        document.getElementById('btn-abrir-modal-pergunta').addEventListener('click', () => { document.getElementById('form-pergunta-quiz').reset(); document.getElementById('perg-id').value = ''; document.getElementById('titulo-modal-pergunta').textContent = 'Nova Pergunta'; document.getElementById('modal-pergunta-quiz').style.display = 'flex'; });
-
         function abrirModalEditarPergunta(id) { let p = cachePerguntasQuiz.find(item => item.id === id); if (!p) return; document.getElementById('perg-id').value = p.id; document.getElementById('perg-categoria').value = p.categoria; document.getElementById('perg-enunciado').value = p.enunciado; document.getElementById('perg-gabarito').value = p.gabarito; document.getElementById('perg-explicacao').value = p.explicacao; document.getElementById('titulo-modal-pergunta').textContent = 'Editar Pergunta'; document.getElementById('modal-pergunta-quiz').style.display = 'flex'; }
 
         function confirmarExclusaoPergunta(id) { abrirModalConfirmacao('Tem certeza que deseja excluir esta pergunta? Essa ação não pode ser desfeita.', () => { apiFetch({ action: 'deletar_pergunta_quiz', classe: session.classe, id: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarPerguntasQuiz(); }); }); }
@@ -907,6 +955,16 @@
         }
         function extrairIdGoogleDrive(url) { if (!url) return null; let u = extrairSrc(url); try { if (u.includes('/file/d/')) return u.split('/file/d/')[1].split('/')[0]; if (u.includes('drive.google.com/open?id=')) return u.split('id=')[1].split('&')[0]; if (u.includes('drive.google.com/uc?id=')) return u.split('id=')[1].split('&')[0]; } catch(e) {} return null; }
         
+        function abrirModalEditarAula(id, nome, link, desc, anexo) { 
+            document.getElementById('aula-id').value = id; 
+            document.getElementById('aula-nome').value = nome; 
+            document.getElementById('aula-link').value = link; 
+            document.getElementById('aula-desc').value = desc; 
+            document.getElementById('aula-anexo').value = anexo || '';
+            document.getElementById('titulo-modal-aula').textContent = 'Editar Aula'; 
+            document.getElementById('modal-aula').style.display = 'flex'; 
+        }
+
         function renderizarAulas(listaAulas) {
             let ehMonitor = (session.classe === 'monitor'); const grid = document.getElementById('aulas-grid'); grid.innerHTML = '';
             if (!listaAulas || listaAulas.length === 0) { grid.innerHTML = '<p style="color:var(--text-muted);">Nenhuma aula encontrada.</p>'; return; }
@@ -915,13 +973,27 @@
                 let liberada = ehMonitor || indexReal === 0 || cacheAulasConcluidas.includes(cacheAulasDoModulo[indexReal - 1].aula_id); let jaConcluida = cacheAulasConcluidas.includes(aula.aula_id);
                 let ytId = obterIdYoutube(aula.link); let driveId = !ytId ? extrairIdGoogleDrive(aula.link) : null;
                 let thumbStyle = ytId ? `background-image: url('https://img.youtube.com/vi/${ytId}/hqdefault.jpg');` : (driveId ? `background-image: url('https://drive.google.com/thumbnail?id=${driveId}&sz=w500');` : '');
-                let editButtonsHTML = (ehMonitor) ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarAula('${escapeParaJS(aula.aula_id)}', '${escapeParaJS(aula.nome_aula)}', '${escapeParaJS(aula.link)}', '${escapeParaJS(aula.descricao)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarAula('${escapeParaJS(aula.aula_id)}')">Excluir</button></div>` : '';
+                let editButtonsHTML = (ehMonitor) ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarAula('${escapeParaJS(aula.aula_id)}', '${escapeParaJS(aula.nome_aula)}', '${escapeParaJS(aula.link)}', '${escapeParaJS(aula.descricao)}', '${escapeParaJS(aula.anexo_url)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarAula('${escapeParaJS(aula.aula_id)}')">Excluir</button></div>` : '';
                 let badgeConcluidaHTML = jaConcluida ? `<div class="aula-badge-concluida">✓ Concluída</div>` : ''; let playOrLockIconHTML = liberada ? `<div class="aula-card-play-icon">▶</div>` : `<div class="aula-card-lock-icon">🔒</div>`;
                 if (!liberada) card.classList.add('locked');
                 card.innerHTML = `${badgeConcluidaHTML}<div class="aula-card-thumb" style="${thumbStyle}">${playOrLockIconHTML}</div><div class="aula-card-body"><h4>${aula.nome_aula}</h4><p>${aula.descricao || ''}</p></div>${editButtonsHTML}`;
                 card.onclick = () => {
                     if (!liberada) { showToast("Conclua a aula anterior para desbloquear esta!", true); return; }
-                    currentContext.aula_id = aula.aula_id; document.getElementById('view-modulo').style.display = 'none'; document.getElementById('view-aula').style.display = 'block'; document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula; document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao); document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
+                    currentContext.aula_id = aula.aula_id; 
+                    document.getElementById('view-modulo').style.display = 'none'; 
+                    document.getElementById('view-aula').style.display = 'block'; 
+                    document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula; 
+                    document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao); 
+                    document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
+                    
+                    if (aula.anexo_url) {
+                        document.getElementById('box-anexo-aula').style.display = 'block';
+                        document.getElementById('link-anexo-aula').href = aula.anexo_url;
+                    } else {
+                        document.getElementById('box-anexo-aula').style.display = 'none';
+                        document.getElementById('link-anexo-aula').href = '#';
+                    }
+
                     let btnConcluir = document.getElementById('btn-concluir-aula');
                     if (session.classe === 'monitor') { btnConcluir.style.display = 'none'; } else {
                         btnConcluir.style.display = 'inline-flex'; atualizarEstadoBotaoConcluir(aula.aula_id);
@@ -932,11 +1004,28 @@
         }
         document.getElementById('busca-aulas').addEventListener('input', function() { let termo = this.value.trim().toLowerCase(); let filtradas = termo ? cacheAulasDoModulo.filter(a => (a.nome_aula || '').toLowerCase().includes(termo)) : cacheAulasDoModulo; renderizarAulas(filtradas); });
         function atualizarEstadoBotaoConcluir(aulaId) { let btnConcluir = document.getElementById('btn-concluir-aula'); if (cacheAulasConcluidas.includes(aulaId)) { btnConcluir.className = 'btn-concluir concluida'; btnConcluir.innerHTML = '<span>✓</span> Aula Concluída'; } else { btnConcluir.className = 'btn-concluir'; btnConcluir.innerHTML = '<span>✓</span> Marcar como Concluída'; } }
-        function abrirModalEditarAula(id, nome, link, desc) { document.getElementById('aula-id').value = id; document.getElementById('aula-nome').value = nome; document.getElementById('aula-link').value = link; document.getElementById('aula-desc').value = desc; document.getElementById('titulo-modal-aula').textContent = 'Editar Aula'; document.getElementById('modal-aula').style.display = 'flex'; }
         function deletarAula(id) { abrirModalConfirmacao("Tem certeza que deseja excluir esta aula?", () => { apiFetch({ action: 'deletar_aula', aula_id: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarAulas(); }); }); }
         document.getElementById('btn-voltar-modulo').addEventListener('click', () => { document.getElementById('iframe-video').src = ''; document.getElementById('view-aula').style.display = 'none'; document.getElementById('view-modulo').style.display = 'block'; carregarAulas(); });
+        
         document.getElementById('form-add-modulo').addEventListener('submit', e => { e.preventDefault(); let modId = document.getElementById('mod-id').value; apiFetch({ action: modId ? 'editar_modulo' : 'cadastrar_modulo', id_modulo: modId, nome: document.getElementById('mod-nome').value, descricao: document.getElementById('mod-desc').value, oculto: document.getElementById('mod-oculto').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-modulo').style.display = 'none'; carregarModulos(); }); });
-        document.getElementById('form-add-aula').addEventListener('submit', e => { e.preventDefault(); let aulaId = document.getElementById('aula-id').value; apiFetch({ action: aulaId ? 'editar_aula' : 'cadastrar_aula', aula_id: aulaId, id_modulo: currentContext.modulo_id, nome_aula: document.getElementById('aula-nome').value || 'Aula', link: document.getElementById('aula-link').value, descricao: document.getElementById('aula-desc').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-aula').style.display = 'none'; carregarAulas(); }); });
+        
+        document.getElementById('form-add-aula').addEventListener('submit', e => { 
+            e.preventDefault(); 
+            let aulaId = document.getElementById('aula-id').value; 
+            apiFetch({ 
+                action: aulaId ? 'editar_aula' : 'cadastrar_aula', 
+                aula_id: aulaId, 
+                id_modulo: currentContext.modulo_id, 
+                nome_aula: document.getElementById('aula-nome').value || 'Aula', 
+                link: document.getElementById('aula-link').value, 
+                descricao: document.getElementById('aula-desc').value,
+                anexo_url: document.getElementById('aula-anexo').value 
+            }).then(data => { 
+                showToast(data.mensagem); 
+                document.getElementById('modal-aula').style.display = 'none'; 
+                carregarAulas(); 
+            }); 
+        });
 
         function abrirPlayerFilme(driveId, titulo, descricao) { 
             document.getElementById('titulo-player-filme').textContent = titulo || 'Filme'; 
