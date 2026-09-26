@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Monitorando - Manutenção Programada</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><rect width='100' height='100' rx='20' fill='%23ec4899'/><path d='M30 50 L45 65 L70 35' stroke='white' stroke-width='10' stroke-linecap='round' stroke-linejoin='round' fill='none'/></svg>">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    
+    <script>
+        (function() {
+            var t = { nome: 'rosa', primary: '#ec4899', dark: '#be185d', glow: 'rgba(236, 72, 153, 0.35)' };
+            var root = document.documentElement.style;
+            root.setProperty('--primary-color', t.primary);
+            root.setProperty('--primary-gradient', 'linear-gradient(135deg, ' + t.primary + ' 0%, ' + t.dark + ' 100%)');
+            root.setProperty('--accent-glow', t.glow);
+        })();
+    </script>
+    <style>
+        :root {
+            --bg-color: #0c0d10; --container-bg: #14161d; --container-card: #1a1d26;
+            --text-main: #f9fafb; --text-muted: #9ca3af; --primary-color: #ec4899;
+            --primary-gradient: linear-gradient(135deg, #ec4899 0%, #be185d 100%);
+            --accent-glow: rgba(236, 72, 153, 0.35); --input-border: #282c38; --input-bg: #101217;
+        }
+
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: var(--bg-color); }
+        ::-webkit-scrollbar-thumb { background: #282c38; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: var(--primary-color); }
+
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background: #0c0d10; color: var(--text-main); min-height: 100vh; 
+            display: flex; justify-content: center; align-items: center; overflow: hidden; position: relative;
+        }
+
+        #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; opacity: 0.35; display: block; }
+        
+        .maintenance-wrapper { width: 100%; min-height: 100vh; display: flex; justify-content: center; align-items: center; padding: 20px; position: relative; z-index: 1; }
+        .maintenance-card { background-color: var(--container-bg); border-radius: 20px; box-shadow: 0 0 40px rgba(236, 72, 153, 0.2); width: 100%; max-width: 480px; overflow: hidden; position: relative; border: 1px solid rgba(236, 72, 153, 0.3); text-align: center; padding: 40px 30px; }
+        
+        .icon-container { width: 70px; height: 70px; border-radius: 50%; background: var(--primary-gradient); color: white; display: flex; align-items: center; justify-content: center; font-size: 30px; margin: 0 auto 24px auto; box-shadow: 0 0 20px rgba(236, 72, 153, 0.4); }
+        
+        .header h1 { font-size: 26px; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; margin-bottom: 12px; }
+        .header p { font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 25px; }
+
+        .status-box { background: var(--input-bg); border: 1px solid var(--input-border); border-radius: 12px; padding: 16px; margin-bottom: 25px; font-size: 13px; color: var(--text-muted); display: flex; align-items: center; justify-content: center; gap: 8px; }
+        .status-dot { width: 10px; height: 10px; background-color: #f59e0b; border-radius: 50%; display: inline-block; animation: pulse 1.5s infinite; }
+
+        @keyframes pulse {
+            0% { transform: scale(0.95); opacity: 0.8; }
+            50% { transform: scale(1.2); opacity: 1; box-shadow: 0 0 10px #f59e0b; }
+            100% { transform: scale(0.95); opacity: 0.8; }
+        }
+
+        .btn-refresh { width: 100%; padding: 14px; background: var(--primary-gradient); color: #ffffff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.2s ease; text-decoration: document; display: inline-block; }
+        .btn-refresh:hover { opacity: 0.9; }
+        
+        .footer-note { font-size: 12px; color: var(--text-muted); margin-top: 25px; }
+    </style>
+</head>
+<body>
+
+    <canvas id="bg-canvas"></canvas>
+
+    <div class="maintenance-wrapper">
+        <div class="maintenance-card">
+            <div class="icon-container">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"></path></svg>
+            </div>
+            
+            <div class="header">
+                <h1>Sistema em Manutenção</h1>
+                <p>Estamos realizando melhorias e atualizações em nossa plataforma para oferecer uma experiência ainda melhor. Retornaremos em breve!</p>
+            </div>
+
+            <div class="status-box">
+                <span class="status-dot"></span>
+                <span>Previsão de retorno: Breve</span>
+            </div>
+
+            <button class="btn-refresh" onclick="window.location.reload()">Verificar Status</button>
+            
+            <div class="footer-note">
+                Plataforma de Monitoria • Campus Criciúma
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Animação de fundo (Matrix digital idêntica à tela de login)
+        const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
+        let width = canvas.width = window.innerWidth; let height = canvas.height = window.innerHeight;
+        window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
+        const chars = '0123456789ABCDEF{}[];<>/=+#$const let function void return'; const fontSize = 14; const drops = Array(Math.floor(width / fontSize)).fill(1);
+        
+        function drawMatrix() {
+            ctx.fillStyle = 'rgba(8, 9, 13, 0.15)'; ctx.fillRect(0, 0, width, height); ctx.font = '700 ' + fontSize + 'px monospace';
+            for (let i = 0; i < drops.length; i++) {
+                const text = chars[Math.floor(Math.random() * chars.length)];
+                ctx.fillStyle = (Math.random() > 0.92) ? '#ffffff' : '#ec4899'; 
+                ctx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > height && Math.random() > 0.975) drops[i] = 0; drops[i]++;
+            }
+            requestAnimationFrame(drawMatrix);
+        }
+        requestAnimationFrame(drawMatrix);
+    </script>
+</body>
+</html>
