@@ -546,7 +546,16 @@
 
     <script>
         function escapeParaJS(str) { if (!str) return ''; return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, ''); }
-        function processarTextoComLinks(texto) { if (!texto) return ''; let txt = texto.replace(/</g, "&lt;").replace(/>/g, "&gt;"); const regexLinks = /(https?:\/\/[^\s]+)/g; txt = txt.replace(regexLinks, '<a href="$1" target="_blank" class="link-destaque">$1</a>'); txt = txt.replace(/\n/g, '<br>'); return txt; }
+        
+        function processarTextoComLinks(texto) { 
+            if (!texto) return ''; 
+            let txt = texto.replace(/</g, "&lt;").replace(/>/g, "&gt;"); 
+            const regexLinks = /(https?:\/\/[^\s]+)/g; 
+            txt = txt.replace(regexLinks, '<a href="$1" target="_blank" class="link-destaque">$1</a>'); 
+            txt = txt.replace(/monitorandoifsc@gmail\.com/gi, '<span style="color: var(--primary-color); font-weight: bold;">$&</span>'); 
+            txt = txt.replace(/\n/g, '<br>'); 
+            return txt; 
+        }
 
         let cacheAulasConcluidas = [];
         let cacheModulos = []; 
@@ -657,7 +666,6 @@
                             cacheAulasDoModulo = dataAulas.aulas || []; let aula = cacheAulasDoModulo.find(a => a.aula_id === n.ref_aula);
                             if (!aula) { renderizarAulas(cacheAulasDoModulo); showToast('Aula não disponível.', true); return; }
                             
-                            // Abrir aula
                             currentContext.aula_id = aula.aula_id; 
                             document.getElementById('view-modulo').style.display = 'none'; 
                             document.getElementById('view-aula').style.display = 'block';
@@ -788,7 +796,6 @@
         
         document.getElementById('btn-abrir-modal-modulo').addEventListener('click', () => { document.getElementById('form-add-modulo').reset(); document.getElementById('mod-id').value = ''; document.getElementById('titulo-modal-modulo').textContent = 'Novo Módulo'; document.getElementById('modal-modulo').style.display = 'flex'; });
         
-        // CORREÇÃO: Restaurado o Event Listener do botão Editar Módulo
         document.getElementById('btn-editar-modulo').addEventListener('click', () => { 
             document.getElementById('mod-id').value = currentContext.modulo_id; 
             document.getElementById('mod-nome').value = currentContext.modulo_nome; 
@@ -995,7 +1002,6 @@
                 
                 li.innerHTML = `<span>${mod.nome}</span>`;
                 
-                // Ativar drag and drop apenas para monitores e quando não há pesquisa ativa (para não bagunçar a ordem geral)
                 if (ehMonitor && termoBusca === '') {
                     li.draggable = true;
                     li.dataset.id = mod.id_modulo;
@@ -1071,14 +1077,10 @@
                     this.parentNode.insertBefore(dragSrcEl, this);
                 }
                 
-                // Capturar nova ordem de IDs do DOM
                 let novaOrdem = Array.from(list.children).map(li => li.dataset.id);
-                
-                // Enviar para o servidor
                 apiFetch({ action: 'reordenar_modulos', ordem: JSON.stringify(novaOrdem), classe: session.classe })
                     .then(res => { if(res.status !== 'sucesso') showToast(res.mensagem, true); });
                 
-                // Reordenar a lista cache local
                 let novoCache = [];
                 novaOrdem.forEach(id => {
                     let m = cacheModulos.find(x => x.id_modulo === id);
@@ -1255,7 +1257,20 @@
             }); 
         });
 
-        function carregarComentariosAula() { apiFetch({ action: 'listar_comentarios', modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { const list = document.getElementById('comments-list-aula'); list.innerHTML = ''; cacheComentariosAula = data.comentarios || []; if (cacheComentariosAula.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma dúvida cadastrada.</p>'; return; } cacheComentariosAula.forEach((c, idx) => { let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioAula(${idx})">Excluir</button>` : ''; list.innerHTML += `<div class="comment-item"><div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}</span>${deleteBtn}</div><div class="comment-text">${c.comentario}</div></div></div>`; }); }); }
+        function carregarComentariosAula() { 
+            apiFetch({ action: 'listar_comentarios', modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { 
+                const list = document.getElementById('comments-list-aula'); list.innerHTML = ''; cacheComentariosAula = data.comentarios || []; 
+                if (cacheComentariosAula.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma dúvida cadastrada.</p>'; return; } 
+                cacheComentariosAula.forEach((c, idx) => { 
+                    let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioAula(${idx})">Excluir</button>` : ''; 
+                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${c.matricula})</span>` : '';
+                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${c.nome.charAt(0).toUpperCase()}</div>`;
+                    let textoProc = processarTextoComLinks(c.comentario);
+                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
+                }); 
+            }); 
+        }
+
         document.getElementById('form-comentario-aula').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', nome: session.nome, matricula: session.matricula, comentario: document.getElementById('texto-comentario-aula').value, modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-aula').value = ''; carregarComentariosAula(); }); });
         function deletarComentarioAula(idx) { let c = cacheComentariosAula[idx]; abrirModalConfirmacao("Excluir comentário?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.modulo_id, aula: currentContext.aula_id, comentario: c.comentario }).then(() => carregarComentariosAula()); }); }
 
@@ -1263,14 +1278,55 @@
             if (cacheTopicosForum) { renderizarTopicosForum(); }
             apiFetch({ action: 'listar_topicos_forum' }).then(data => { cacheTopicosForum = (data.topicos || []).reverse(); renderizarTopicosForum(); }); 
         }
-        function renderizarTopicosForum() { const container = document.getElementById('forum-topicos-container'); const termo = (document.getElementById('busca-forum').value || '').trim().toLowerCase(); const listaFiltrada = termo ? cacheTopicosForum.filter(t => (t.nome_forum || '').toLowerCase().includes(termo)) : (cacheTopicosForum || []); container.innerHTML = ''; if (listaFiltrada.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:30px;">${termo ? 'Nenhum tópico encontrado para "' + termo + '".' : 'Nenhum tópico.'}</p>`; return; } listaFiltrada.forEach((t) => { let idx = cacheTopicosForum.indexOf(t); let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === t.autor_matricula.toString()) ? `<button class="btn-text-action danger" onclick="event.stopPropagation(); deletarTopicoForum(${idx})">Excluir</button>` : ''; container.innerHTML += `<div class="forum-topico-card"><div class="forum-topico-header"><div class="forum-topico-title" onclick='abrirTopicoForum(${idx})'>${t.nome_forum}</div>${deleteBtn}</div><div class="forum-topico-meta">Por: ${t.autor_nome} • ${t.data_criacao}</div><p class="forum-topico-texto">${t.texto}</p></div>`; }); }
+
+        function renderizarTopicosForum() { 
+            const container = document.getElementById('forum-topicos-container'); const termo = (document.getElementById('busca-forum').value || '').trim().toLowerCase(); 
+            const listaFiltrada = termo ? cacheTopicosForum.filter(t => (t.nome_forum || '').toLowerCase().includes(termo)) : (cacheTopicosForum || []); container.innerHTML = ''; 
+            if (listaFiltrada.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:30px;">${termo ? 'Nenhum tópico encontrado para "' + termo + '".' : 'Nenhum tópico.'}</p>`; return; } 
+            listaFiltrada.forEach((t) => { 
+                let idx = cacheTopicosForum.indexOf(t); 
+                let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === t.autor_matricula.toString()) ? `<button class="btn-text-action danger" onclick="event.stopPropagation(); deletarTopicoForum(${idx})">Excluir</button>` : ''; 
+                let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${t.autor_matricula})</span>` : '';
+                let avatarHTML = t.autor_foto ? `<img src="${t.autor_foto}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:6px;">` : `<div style="width:24px; height:24px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:6px; font-size: 11px;">${t.autor_nome.charAt(0).toUpperCase()}</div>`;
+                let textoProc = processarTextoComLinks(t.texto);
+                container.innerHTML += `<div class="forum-topico-card"><div class="forum-topico-header"><div class="forum-topico-title" onclick='abrirTopicoForum(${idx})'>${t.nome_forum}</div>${deleteBtn}</div><div class="forum-topico-meta" style="display:flex; align-items:center;">${avatarHTML} Por: ${t.autor_nome}${matriculaDisplay} • ${t.data_criacao}</div><p class="forum-topico-texto">${textoProc}</p></div>`; 
+            }); 
+        }
         document.getElementById('busca-forum').addEventListener('input', renderizarTopicosForum);
-        function abrirTopicoForum(idx) { let topico = cacheTopicosForum[idx]; currentContext.forum_topico_id = topico.id_forum; document.getElementById('view-forum-lista').style.display = 'none'; document.getElementById('view-forum-topico').style.display = 'block'; document.getElementById('detalhe-topico-titulo').textContent = topico.nome_forum; document.getElementById('detalhe-topico-meta').textContent = `Por: ${topico.autor_nome} • ${topico.data_criacao}`; document.getElementById('detalhe-topico-texto').textContent = topico.texto; carregarComentariosForum(); }
+        
+        function abrirTopicoForum(idx) { 
+            let topico = cacheTopicosForum[idx]; 
+            currentContext.forum_topico_id = topico.id_forum; 
+            document.getElementById('view-forum-lista').style.display = 'none'; 
+            document.getElementById('view-forum-topico').style.display = 'block'; 
+            document.getElementById('detalhe-topico-titulo').textContent = topico.nome_forum; 
+            
+            let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${topico.autor_matricula})</span>` : '';
+            let avatarHTML = topico.autor_foto ? `<img src="${topico.autor_foto}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:8px;">` : `<div style="width:28px; height:28px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:8px; font-size: 12px;">${topico.autor_nome.charAt(0).toUpperCase()}</div>`;
+            
+            document.getElementById('detalhe-topico-meta').innerHTML = `${avatarHTML} Por: ${topico.autor_nome}${matriculaDisplay} • ${topico.data_criacao}`; 
+            document.getElementById('detalhe-topico-texto').innerHTML = processarTextoComLinks(topico.texto); 
+            carregarComentariosForum(); 
+        }
+
         document.getElementById('btn-voltar-forum').addEventListener('click', () => { document.getElementById('view-forum-topico').style.display = 'none'; document.getElementById('view-forum-lista').style.display = 'block'; });
         document.getElementById('form-add-topico').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'cadastrar_topico_forum', nome_forum: document.getElementById('topico-titulo').value, texto: document.getElementById('topico-texto').value, nome: session.nome, matricula: session.matricula }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-topico-forum').style.display = 'none'; carregarTopicosForum(); } }); });
         function deletarTopicoForum(idx) { let t = cacheTopicosForum[idx]; abrirModalConfirmacao("Excluir tópico?", () => { apiFetch({ action: 'deletar_topico_forum', id_forum: t.id_forum }).then(() => { document.getElementById('view-forum-topico').style.display = 'none'; document.getElementById('view-forum-lista').style.display = 'block'; carregarTopicosForum(); }); }); }
 
-        function carregarComentariosForum() { apiFetch({ action: 'listar_comentarios', modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { const list = document.getElementById('comments-list-forum'); list.innerHTML = ''; cacheComentariosForum = data.comentarios || []; if (cacheComentariosForum.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma resposta.</p>'; return; } cacheComentariosForum.forEach((c, idx) => { let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioForum(${idx})">Excluir</button>` : ''; list.innerHTML += `<div class="comment-item"><div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}</span>${deleteBtn}</div><div class="comment-text">${c.comentario}</div></div></div>`; }); }); }
+        function carregarComentariosForum() { 
+            apiFetch({ action: 'listar_comentarios', modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { 
+                const list = document.getElementById('comments-list-forum'); list.innerHTML = ''; cacheComentariosForum = data.comentarios || []; 
+                if (cacheComentariosForum.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma resposta.</p>'; return; } 
+                cacheComentariosForum.forEach((c, idx) => { 
+                    let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioForum(${idx})">Excluir</button>` : ''; 
+                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${c.matricula})</span>` : '';
+                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${c.nome.charAt(0).toUpperCase()}</div>`;
+                    let textoProc = processarTextoComLinks(c.comentario);
+                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
+                }); 
+            }); 
+        }
+
         document.getElementById('form-comentario-forum').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', nome: session.nome, matricula: session.matricula, comentario: document.getElementById('texto-comentario-forum').value, modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-forum').value = ''; carregarComentariosForum(); }); });
         function deletarComentarioForum(idx) { let c = cacheComentariosForum[idx]; abrirModalConfirmacao("Excluir resposta?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.forum_topico_id, aula: 'forum', comentario: c.comentario }).then(() => carregarComentariosForum()); }); }
 
