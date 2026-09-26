@@ -99,13 +99,18 @@
         
         .dashboard-layout { display: flex; width: 100%; margin-top: 70px; min-height: calc(100vh - 70px); }
         .sidebar { width: 320px; background-color: var(--sidebar-bg); border-right: 1px solid var(--input-border); padding: 25px; overflow-y: auto; flex-shrink: 0; display: flex; flex-direction: column; }
-        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .sidebar h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
         .module-list { list-style: none; flex: 1; }
-        .module-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; margin-bottom: 10px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-main); background-color: var(--container-bg); border: 1px solid transparent; }
+        .module-item { display: flex; justify-content: space-between; align-items: center; padding: 14px 18px; margin-bottom: 10px; border-radius: 10px; cursor: pointer; font-size: 14px; font-weight: 600; color: var(--text-main); background-color: var(--container-bg); border: 1px solid transparent; transition: background-color 0.2s, border-color 0.2s; }
         .module-item:hover { border-color: var(--input-border); background-color: var(--container-card); }
         .module-item.active { background-color: var(--container-card); border-color: var(--primary-color); color: var(--primary-color); }
         
+        /* Drag and Drop visual cues */
+        .module-item[draggable="true"] { cursor: grab; }
+        .module-item[draggable="true"]:active { cursor: grabbing; }
+        .module-item.over { border: 2px dashed var(--primary-color); background-color: var(--container-card); opacity: 0.8; }
+
         .btn-admin { background: var(--primary-gradient); color: white; border: none; padding: 8px 14px; border-radius: 8px; font-weight: 600; cursor: pointer; font-size: 12px; }
         .btn-text-action { background: none; border: 1px solid var(--input-border); border-radius: 6px; padding: 4px 10px; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--text-muted); margin-left: 6px; }
         .btn-text-action:hover { border-color: var(--primary-color); color: var(--primary-color); }
@@ -321,7 +326,13 @@
         <!-- CONTEÚDO / MÓDULOS -->
         <div class="dashboard-layout" id="sec-conteudo">
             <aside class="sidebar">
-                <div class="sidebar-header"><h3>Módulos</h3><button id="btn-abrir-modal-modulo" class="btn-admin" style="display: none;">+ Novo</button></div>
+                <div class="sidebar-header" style="margin-bottom: 15px;">
+                    <h3>Módulos</h3>
+                    <button id="btn-abrir-modal-modulo" class="btn-admin" style="display: none;">+ Novo</button>
+                </div>
+                <div class="form-group" style="margin-bottom: 20px;">
+                    <input type="text" id="busca-modulos" placeholder="Pesquisar módulo..." style="background-color: var(--input-bg); border-radius: 8px; padding: 10px 14px; margin-bottom: 0;">
+                </div>
                 <ul class="module-list" id="module-list"></ul>
             </aside>
             <main class="content-area">
@@ -538,6 +549,9 @@
         function processarTextoComLinks(texto) { if (!texto) return ''; let txt = texto.replace(/</g, "&lt;").replace(/>/g, "&gt;"); const regexLinks = /(https?:\/\/[^\s]+)/g; txt = txt.replace(regexLinks, '<a href="$1" target="_blank" class="link-destaque">$1</a>'); txt = txt.replace(/\n/g, '<br>'); return txt; }
 
         let cacheAulasConcluidas = [];
+        let cacheModulos = []; 
+        let dragSrcEl = null;
+
         const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
         let width = canvas.width = window.innerWidth; let height = canvas.height = window.innerHeight;
         window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
@@ -934,16 +948,137 @@
             apiFetch(payload).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-pergunta-quiz').style.display = 'none'; carregarPerguntasQuiz(); } });
         });
 
+        // =========================================================================
+        // MÓDULOS & RENDERIZAÇÃO
+        // =========================================================================
+
         function carregarModulos() {
             apiFetch({ action: 'listar_modulos', classe: session.classe }).then(data => {
-                const list = document.getElementById('module-list'); list.innerHTML = '';
-                (data.modulos || []).forEach(mod => {
-                    let li = document.createElement('li'); li.className = 'module-item'; if (currentContext.modulo_id === mod.id_modulo) li.classList.add('active'); li.innerHTML = `<span>${mod.nome}</span>`;
-                    li.onclick = () => { document.querySelectorAll('.module-item').forEach(el => el.classList.remove('active')); li.classList.add('active'); currentContext.modulo_id = mod.id_modulo; currentContext.modulo_nome = mod.nome; currentContext.modulo_desc = mod.descricao; currentContext.modulo_oculto = mod.oculto; document.getElementById('view-modulo').style.display = 'block'; document.getElementById('view-aula').style.display = 'none'; document.getElementById('titulo-modulo-selecionado').textContent = mod.nome; document.getElementById('desc-modulo-selecionado').textContent = mod.descricao; if (session.classe === 'monitor') { document.getElementById('btn-editar-modulo').style.display = 'inline-block'; document.getElementById('btn-deletar-modulo').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-aula').style.display = 'inline-block'; } carregarAulas(); };
-                    list.appendChild(li);
-                });
+                cacheModulos = data.modulos || [];
+                renderizarModulos(cacheModulos);
             });
         }
+
+        function renderizarModulos(lista) {
+            const list = document.getElementById('module-list'); 
+            list.innerHTML = '';
+            
+            let ehMonitor = (session.classe === 'monitor');
+            let termoBusca = document.getElementById('busca-modulos').value.trim();
+
+            if (lista.length === 0) {
+                list.innerHTML = `<p style="color:var(--text-muted); font-size:13px; text-align:center;">Nenhum módulo encontrado.</p>`;
+                return;
+            }
+
+            lista.forEach(mod => {
+                let li = document.createElement('li'); 
+                li.className = 'module-item'; 
+                if (currentContext.modulo_id === mod.id_modulo) li.classList.add('active'); 
+                
+                li.innerHTML = `<span>${mod.nome}</span>`;
+                
+                // Ativar drag and drop apenas para monitores e quando não há pesquisa ativa (para não bagunçar a ordem geral)
+                if (ehMonitor && termoBusca === '') {
+                    li.draggable = true;
+                    li.dataset.id = mod.id_modulo;
+                    li.addEventListener('dragstart', handleDragStart);
+                    li.addEventListener('dragover', handleDragOver);
+                    li.addEventListener('dragenter', handleDragEnter);
+                    li.addEventListener('dragleave', handleDragLeave);
+                    li.addEventListener('drop', handleDrop);
+                    li.addEventListener('dragend', handleDragEnd);
+                }
+
+                li.onclick = () => { 
+                    document.querySelectorAll('.module-item').forEach(el => el.classList.remove('active')); 
+                    li.classList.add('active'); 
+                    currentContext.modulo_id = mod.id_modulo; 
+                    currentContext.modulo_nome = mod.nome; 
+                    currentContext.modulo_desc = mod.descricao; 
+                    currentContext.modulo_oculto = mod.oculto; 
+                    
+                    document.getElementById('view-modulo').style.display = 'block'; 
+                    document.getElementById('view-aula').style.display = 'none'; 
+                    document.getElementById('titulo-modulo-selecionado').textContent = mod.nome; 
+                    document.getElementById('desc-modulo-selecionado').textContent = mod.descricao; 
+                    
+                    if (ehMonitor) { 
+                        document.getElementById('btn-editar-modulo').style.display = 'inline-block'; 
+                        document.getElementById('btn-deletar-modulo').style.display = 'inline-block'; 
+                        document.getElementById('btn-abrir-modal-aula').style.display = 'inline-block'; 
+                    } 
+                    carregarAulas(); 
+                };
+                list.appendChild(li);
+            });
+        }
+
+        // --- SISTEMA DE PESQUISA DE MÓDULOS ---
+        document.getElementById('busca-modulos').addEventListener('input', function() {
+            let termo = this.value.trim().toLowerCase();
+            let filtrados = termo ? cacheModulos.filter(m => (m.nome || '').toLowerCase().includes(termo)) : cacheModulos;
+            renderizarModulos(filtrados);
+        });
+
+        // --- SISTEMA DE DRAG AND DROP (MÓDULOS) ---
+        function handleDragStart(e) {
+            dragSrcEl = this;
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/html', this.innerHTML);
+            this.style.opacity = '0.4';
+        }
+
+        function handleDragOver(e) {
+            if (e.preventDefault) { e.preventDefault(); }
+            e.dataTransfer.dropEffect = 'move';
+            return false;
+        }
+
+        function handleDragEnter(e) { this.classList.add('over'); }
+        function handleDragLeave(e) { this.classList.remove('over'); }
+
+        function handleDrop(e) {
+            if (e.stopPropagation) { e.stopPropagation(); }
+            this.classList.remove('over');
+            
+            if (dragSrcEl !== this) {
+                let list = document.getElementById('module-list');
+                let items = Array.from(list.children);
+                let fromIndex = items.indexOf(dragSrcEl);
+                let toIndex = items.indexOf(this);
+                
+                if (fromIndex < toIndex) {
+                    this.parentNode.insertBefore(dragSrcEl, this.nextSibling);
+                } else {
+                    this.parentNode.insertBefore(dragSrcEl, this);
+                }
+                
+                // Capturar nova ordem de IDs do DOM
+                let novaOrdem = Array.from(list.children).map(li => li.dataset.id);
+                
+                // Enviar para o servidor
+                apiFetch({ action: 'reordenar_modulos', ordem: JSON.stringify(novaOrdem), classe: session.classe })
+                    .then(res => { if(res.status !== 'sucesso') showToast(res.mensagem, true); });
+                
+                // Reordenar a lista cache local
+                let novoCache = [];
+                novaOrdem.forEach(id => {
+                    let m = cacheModulos.find(x => x.id_modulo === id);
+                    if(m) novoCache.push(m);
+                });
+                cacheModulos = novoCache;
+            }
+            return false;
+        }
+
+        function handleDragEnd(e) {
+            this.style.opacity = '1';
+            let listItems = document.querySelectorAll('.module-item');
+            listItems.forEach(item => item.classList.remove('over'));
+        }
+
+        // =========================================================================
 
         let cacheAulasDoModulo = [];
         function carregarAulas() {
