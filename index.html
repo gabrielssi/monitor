@@ -477,9 +477,36 @@
     <div class="modal-overlay" id="modal-senha"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-senha').style.display='none'">&times;</span><div class="header"><h1>Alterar Senha</h1></div><form id="form-alt-senha"><div class="form-group"><label>Nova Senha (mínimo 8 caracteres)</label><input type="password" id="pass-nova" minlength="8" required></div><button type="submit" class="btn-submit">Atualizar Senha</button></form></div></div>
     <div class="modal-overlay" id="modal-perfil"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-perfil').style.display='none'">&times;</span><div class="header"><h1>Foto de Perfil</h1></div><form id="form-atualizar-perfil"><div class="form-group"><label>URL da Foto</label><input type="url" id="perfil-foto-url" required></div><button type="submit" class="btn-submit">Salvar Perfil</button></form></div></div>
     <div class="modal-overlay" id="modal-modulo"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-modulo').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-modulo">Módulo</h1></div><form id="form-add-modulo"><input type="hidden" id="mod-id"><div class="form-group"><label>Nome</label><input type="text" id="mod-nome" required></div><div class="form-group"><label>Descrição</label><input type="text" id="mod-desc"></div><div class="form-group"><label>Ocultar para Alunos?</label><select id="mod-oculto"><option value="não">Não</option><option value="sim">Sim</option></select></div><button type="submit" class="btn-submit">Salvar Módulo</button></form></div></div>
-    <div class="modal-overlay" id="modal-player-filme"><div class="modal-content" style="max-width: 950px; padding: 20px;"><span class="close-modal" onclick="fecharPlayerFilme()">&times;</span><div class="header" style="text-align:left; margin-bottom:15px;"><h1 id="titulo-player-filme" style="font-size:20px;">Filme</h1></div><div class="video-container" style="margin-bottom:0;"><iframe id="iframe-player-filme" src="" title="Player" allow="autoplay; fullscreen" allowfullscreen></iframe></div></div></div>
-    <div class="modal-overlay" id="modal-filme"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-filme').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-filme">Filme</h1></div><form id="form-add-filme"><input type="hidden" id="filme-id"><div class="form-group"><label>Título</label><input type="text" id="filme-titulo" required maxlength="150"></div><div class="form-group"><label>ID do Arquivo no Google Drive</label><input type="text" id="filme-drive-id" placeholder="Ex: 1AbCDefGhIJKLmnopQRstuv" required></div><div class="form-group"><label>URL da Capa (Opcional - Substitui a do Drive)</label><input type="text" id="filme-capa-url" placeholder="https://link.com/minhacapa.jpg"></div><button type="submit" class="btn-submit">Salvar Filme</button></form></div></div>
     <div class="modal-overlay" id="modal-aula"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-aula').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-aula">Aula</h1></div><form id="form-add-aula"><input type="hidden" id="aula-id"><div class="form-group"><label>Link ou Embed</label><textarea id="aula-link" required rows="3"></textarea></div><div class="form-group"><label>Título</label><input type="text" id="aula-nome"></div><div class="form-group"><label>Descrição</label><textarea id="aula-desc" rows="2"></textarea></div><button type="submit" class="btn-submit">Salvar Aula</button></form></div></div>
+    
+    <div class="modal-overlay" id="modal-player-filme">
+        <div class="modal-content" style="max-width: 950px; padding: 20px;">
+            <span class="close-modal" onclick="fecharPlayerFilme()">&times;</span>
+            <div class="header" style="text-align:left; margin-bottom:15px;">
+                <h1 id="titulo-player-filme" style="font-size:20px;">Filme</h1>
+            </div>
+            <div class="video-container" style="margin-bottom:0;">
+                <iframe id="iframe-player-filme" src="" title="Player" allow="autoplay; fullscreen" allowfullscreen></iframe>
+            </div>
+            <p id="desc-player-filme" style="margin-top: 15px; color: var(--text-muted); font-size: 14px; line-height: 1.5; white-space: pre-wrap;"></p>
+        </div>
+    </div>
+    
+    <div class="modal-overlay" id="modal-filme">
+        <div class="modal-content">
+            <span class="close-modal" onclick="document.getElementById('modal-filme').style.display='none'">&times;</span>
+            <div class="header"><h1 id="titulo-modal-filme">Filme</h1></div>
+            <form id="form-add-filme">
+                <input type="hidden" id="filme-id">
+                <div class="form-group"><label>Título</label><input type="text" id="filme-titulo" required maxlength="150"></div>
+                <div class="form-group"><label>ID do Arquivo no Google Drive</label><input type="text" id="filme-drive-id" placeholder="Ex: 1AbCDefGhIJKLmnopQRstuv" required></div>
+                <div class="form-group"><label>URL da Capa (Opcional)</label><input type="text" id="filme-capa-url" placeholder="https://link.com/minhacapa.jpg"></div>
+                <div class="form-group"><label>Descrição</label><textarea id="filme-desc" rows="3" placeholder="Sinopse ou detalhes do filme..."></textarea></div>
+                <div class="form-group"><label>Ocultar para Alunos?</label><select id="filme-oculto"><option value="nao">Não</option><option value="sim">Sim</option></select></div>
+                <button type="submit" class="btn-submit">Salvar Filme</button>
+            </form>
+        </div>
+    </div>
 
     <script>
         function escapeParaJS(str) { if (!str) return ''; return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, ''); }
@@ -911,9 +938,16 @@
         document.getElementById('form-add-modulo').addEventListener('submit', e => { e.preventDefault(); let modId = document.getElementById('mod-id').value; apiFetch({ action: modId ? 'editar_modulo' : 'cadastrar_modulo', id_modulo: modId, nome: document.getElementById('mod-nome').value, descricao: document.getElementById('mod-desc').value, oculto: document.getElementById('mod-oculto').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-modulo').style.display = 'none'; carregarModulos(); }); });
         document.getElementById('form-add-aula').addEventListener('submit', e => { e.preventDefault(); let aulaId = document.getElementById('aula-id').value; apiFetch({ action: aulaId ? 'editar_aula' : 'cadastrar_aula', aula_id: aulaId, id_modulo: currentContext.modulo_id, nome_aula: document.getElementById('aula-nome').value || 'Aula', link: document.getElementById('aula-link').value, descricao: document.getElementById('aula-desc').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-aula').style.display = 'none'; carregarAulas(); }); });
 
-        function abrirPlayerFilme(driveId, titulo) { document.getElementById('titulo-player-filme').textContent = titulo || 'Filme'; document.getElementById('iframe-player-filme').src = 'https://drive.google.com/file/d/' + driveId + '/preview?autoplay=1'; document.getElementById('modal-player-filme').style.display = 'flex'; }
+        function abrirPlayerFilme(driveId, titulo, descricao) { 
+            document.getElementById('titulo-player-filme').textContent = titulo || 'Filme'; 
+            document.getElementById('iframe-player-filme').src = 'https://drive.google.com/file/d/' + driveId + '/preview?autoplay=1'; 
+            document.getElementById('desc-player-filme').textContent = descricao || '';
+            document.getElementById('modal-player-filme').style.display = 'flex'; 
+        }
         function fecharPlayerFilme() { document.getElementById('modal-player-filme').style.display = 'none'; document.getElementById('iframe-player-filme').src = ''; }
+        
         let cacheFilmes = [];
+        
         function carregarFilmes() {
             document.getElementById('btn-abrir-modal-filme').style.display = (session.classe === 'monitor') ? 'inline-block' : 'none';
             const buscaWrapper = document.getElementById('filmes-busca-wrapper');
@@ -927,26 +961,58 @@
                 renderizarGridFilmes(cacheFilmes);
             });
         }
+
         function renderizarGridFilmes(lista, mensagemVazio) {
             const grid = document.getElementById('filmes-grid'); grid.innerHTML = '';
             if (!lista || lista.length === 0) { grid.innerHTML = `<p style="color:var(--text-muted);">${mensagemVazio || 'Nenhum filme disponível ainda.'}</p>`; return; }
             lista.forEach(f => {
                 let card = document.createElement('div'); card.className = 'aula-card';
-                let editHTML = (session.classe === 'monitor') ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarFilme('${escapeParaJS(f.id)}','${escapeParaJS(f.titulo)}','${escapeParaJS(f.drive_id)}','${escapeParaJS(f.capa)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarFilme('${escapeParaJS(f.id)}')">Excluir</button></div>` : '';
-                card.innerHTML = `<div class="aula-card-thumb" style="background-image:url('${f.capa}');"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${f.titulo}</h4></div>${editHTML}`;
-                card.onclick = () => { abrirPlayerFilme(f.drive_id, f.titulo); }; grid.appendChild(card);
+                let hiddenBadge = (f.oculto === 'sim') ? `<div class="aula-badge-concluida" style="background:var(--danger-color);">Oculto</div>` : '';
+                let editHTML = (session.classe === 'monitor') ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarFilme('${escapeParaJS(f.id)}','${escapeParaJS(f.titulo)}','${escapeParaJS(f.drive_id)}','${escapeParaJS(f.capa)}','${escapeParaJS(f.descricao)}','${escapeParaJS(f.oculto)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarFilme('${escapeParaJS(f.id)}')">Excluir</button></div>` : '';
+                card.innerHTML = `${hiddenBadge}<div class="aula-card-thumb" style="background-image:url('${f.capa}');"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${f.titulo}</h4></div>${editHTML}`;
+                card.onclick = () => { abrirPlayerFilme(f.drive_id, f.titulo, f.descricao); }; grid.appendChild(card);
             });
         }
+        
         function filtrarFilmes() {
             const termo = document.getElementById('filmes-busca-input').value.trim().toLowerCase();
             if (!termo) { renderizarGridFilmes(cacheFilmes); return; }
             const filtrados = cacheFilmes.filter(f => (f.titulo || '').toLowerCase().includes(termo));
             renderizarGridFilmes(filtrados, 'Nenhum filme encontrado com esse título.');
         }
+        
         document.getElementById('btn-abrir-modal-filme').addEventListener('click', () => { document.getElementById('form-add-filme').reset(); document.getElementById('filme-id').value = ''; document.getElementById('titulo-modal-filme').textContent = 'Novo Filme'; document.getElementById('modal-filme').style.display = 'flex'; });
-        function abrirModalEditarFilme(id, titulo, driveId, capaUrl) { document.getElementById('filme-id').value = id; document.getElementById('filme-titulo').value = titulo; document.getElementById('filme-drive-id').value = driveId; document.getElementById('filme-capa-url').value = (capaUrl && !capaUrl.includes("drive.google.com/thumbnail")) ? capaUrl : ''; document.getElementById('titulo-modal-filme').textContent = 'Editar Filme'; document.getElementById('modal-filme').style.display = 'flex'; }
+        
+        function abrirModalEditarFilme(id, titulo, driveId, capaUrl, descricao, oculto) { 
+            document.getElementById('filme-id').value = id; 
+            document.getElementById('filme-titulo').value = titulo; 
+            document.getElementById('filme-drive-id').value = driveId; 
+            document.getElementById('filme-capa-url').value = (capaUrl && !capaUrl.includes("drive.google.com/thumbnail")) ? capaUrl : ''; 
+            document.getElementById('filme-desc').value = descricao || '';
+            document.getElementById('filme-oculto').value = oculto || 'nao';
+            document.getElementById('titulo-modal-filme').textContent = 'Editar Filme'; 
+            document.getElementById('modal-filme').style.display = 'flex'; 
+        }
+        
         function deletarFilme(id) { abrirModalConfirmacao("Excluir filme?", () => { apiFetch({ action: 'deletar_filme', id_filme: id, classe: session.classe }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarFilmes(); }); }); }
-        document.getElementById('form-add-filme').addEventListener('submit', e => { e.preventDefault(); let filmeId = document.getElementById('filme-id').value; apiFetch({ action: filmeId ? 'editar_filme' : 'cadastrar_filme', id_filme: filmeId, titulo: document.getElementById('filme-titulo').value, drive_id: document.getElementById('filme-drive-id').value, capa_url: document.getElementById('filme-capa-url').value, classe: session.classe }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-filme').style.display = 'none'; carregarFilmes(); } }); });
+        
+        document.getElementById('form-add-filme').addEventListener('submit', e => { 
+            e.preventDefault(); 
+            let filmeId = document.getElementById('filme-id').value; 
+            apiFetch({ 
+                action: filmeId ? 'editar_filme' : 'cadastrar_filme', 
+                id_filme: filmeId, 
+                titulo: document.getElementById('filme-titulo').value, 
+                drive_id: document.getElementById('filme-drive-id').value, 
+                capa_url: document.getElementById('filme-capa-url').value, 
+                descricao: document.getElementById('filme-desc').value,
+                oculto: document.getElementById('filme-oculto').value,
+                classe: session.classe 
+            }).then(data => { 
+                showToast(data.mensagem, data.status !== 'sucesso'); 
+                if (data.status === 'sucesso') { document.getElementById('modal-filme').style.display = 'none'; carregarFilmes(); } 
+            }); 
+        });
 
         function carregarComentariosAula() { apiFetch({ action: 'listar_comentarios', modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { const list = document.getElementById('comments-list-aula'); list.innerHTML = ''; cacheComentariosAula = data.comentarios || []; if (cacheComentariosAula.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma dúvida cadastrada.</p>'; return; } cacheComentariosAula.forEach((c, idx) => { let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioAula(${idx})">Excluir</button>` : ''; list.innerHTML += `<div class="comment-item"><div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}</span>${deleteBtn}</div><div class="comment-text">${c.comentario}</div></div></div>`; }); }); }
         document.getElementById('form-comentario-aula').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', nome: session.nome, matricula: session.matricula, comentario: document.getElementById('texto-comentario-aula').value, modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-aula').value = ''; carregarComentariosAula(); }); });
