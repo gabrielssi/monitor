@@ -106,7 +106,6 @@
         .module-item:hover { border-color: var(--input-border); background-color: var(--container-card); }
         .module-item.active { background-color: var(--container-card); border-color: var(--primary-color); color: var(--primary-color); }
         
-        /* Drag and Drop visual cues */
         .module-item[draggable="true"] { cursor: grab; }
         .module-item[draggable="true"]:active { cursor: grabbing; }
         .module-item.over { border: 2px dashed var(--primary-color); background-color: var(--container-card); opacity: 0.8; }
@@ -146,25 +145,10 @@
         .aula-card-lock-icon { width: 36px; height: 36px; border-radius: 50%; background: rgba(16, 18, 23, 0.85); color: var(--text-muted); display: flex; align-items: center; justify-content: center; font-size: 15px; border: 1px solid var(--input-border); }
         .aula-badge-concluida { position: absolute; top: 8px; left: 8px; background: var(--success-color); color: #ffffff; font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 6px; text-transform: uppercase; }
 
-        /* ESTILO EXCLUSIVO E AJUSTADO PARA CAPAS DE FILMES */
-        #sec-filmes .aulas-grid {
-            grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-            gap: 20px;
-        }
-        #sec-filmes .aula-card-thumb {
-            height: 260px;
-            background-size: cover;
-            background-position: center;
-            background-repeat: no-repeat;
-        }
-        #sec-filmes .aula-card-body {
-            padding: 14px;
-            text-align: center;
-        }
-        #sec-filmes .aula-card-body h4 {
-            font-size: 15px;
-            font-weight: 700;
-        }
+        #sec-filmes .aulas-grid { grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 20px; }
+        #sec-filmes .aula-card-thumb { height: 260px; background-size: cover; background-position: center; background-repeat: no-repeat; }
+        #sec-filmes .aula-card-body { padding: 14px; text-align: center; }
+        #sec-filmes .aula-card-body h4 { font-size: 15px; font-weight: 700; }
 
         .aula-card-body { padding: 12px 14px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
         .aula-card h4 { margin-bottom: 4px; color: var(--text-main); font-size: 14px; font-weight: 700; line-height: 1.3; }
@@ -182,7 +166,7 @@
         .forum-topico-card { background: var(--container-card); border-radius: 14px; padding: 24px; border: 1px solid var(--input-border); margin-bottom: 20px; position: relative; }
         .forum-topico-card:hover { border-color: var(--primary-color); }
         .forum-topico-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
-        .forum-topico-title { font-size: 18px; font-weight: 700; color: var(--primary-color); cursor: pointer; }
+        .forum-topico-title { font-size: 18px; font-weight: 700; color: var(--primary-color); cursor: pointer; display: flex; align-items: center; }
         .forum-topico-meta { font-size: 12px; color: var(--text-muted); margin-bottom: 12px; }
         .forum-topico-texto { font-size: 14px; color: var(--text-main); line-height: 1.6; white-space: pre-wrap; margin-bottom: 15px; }
 
@@ -350,7 +334,6 @@
                     <div class="content-header"><h1 id="titulo-aula-selecionada">Título</h1></div>
                     <div class="video-container" id="video-box"><iframe id="iframe-video" src="" title="Player" allowfullscreen></iframe></div>
                     
-                    <!-- DESCRIÇÃO DA AULA -->
                     <div class="description-box">
                         <h3 style="margin-bottom: 12px; font-size: 18px;">Sobre esta aula</h3>
                         <p id="desc-aula-selecionada" style="color: var(--text-muted); line-height: 1.6; white-space: pre-wrap; word-wrap: break-word;"></p>
@@ -972,10 +955,6 @@
             apiFetch(payload).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-pergunta-quiz').style.display = 'none'; carregarPerguntasQuiz(); } });
         });
 
-        // =========================================================================
-        // MÓDULOS & RENDERIZAÇÃO
-        // =========================================================================
-
         function carregarModulos() {
             apiFetch({ action: 'listar_modulos', classe: session.classe }).then(data => {
                 cacheModulos = data.modulos || [];
@@ -1037,14 +1016,12 @@
             });
         }
 
-        // --- SISTEMA DE PESQUISA DE MÓDULOS ---
         document.getElementById('busca-modulos').addEventListener('input', function() {
             let termo = this.value.trim().toLowerCase();
             let filtrados = termo ? cacheModulos.filter(m => (m.nome || '').toLowerCase().includes(termo)) : cacheModulos;
             renderizarModulos(filtrados);
         });
 
-        // --- SISTEMA DE DRAG AND DROP (MÓDULOS) ---
         function handleDragStart(e) {
             dragSrcEl = this;
             e.dataTransfer.effectAllowed = 'move';
@@ -1096,8 +1073,6 @@
             let listItems = document.querySelectorAll('.module-item');
             listItems.forEach(item => item.classList.remove('over'));
         }
-
-        // =========================================================================
 
         let cacheAulasDoModulo = [];
         function carregarAulas() {
@@ -1280,19 +1255,44 @@
         }
 
         function renderizarTopicosForum() { 
-            const container = document.getElementById('forum-topicos-container'); const termo = (document.getElementById('busca-forum').value || '').trim().toLowerCase(); 
-            const listaFiltrada = termo ? cacheTopicosForum.filter(t => (t.nome_forum || '').toLowerCase().includes(termo)) : (cacheTopicosForum || []); container.innerHTML = ''; 
+            const container = document.getElementById('forum-topicos-container'); 
+            const termo = (document.getElementById('busca-forum').value || '').trim().toLowerCase(); 
+            
+            let listaFiltrada = termo ? cacheTopicosForum.filter(t => (t.nome_forum || '').toLowerCase().includes(termo)) : [...cacheTopicosForum]; 
+            
+            listaFiltrada.sort((a, b) => (b.fixado === 'sim' ? 1 : 0) - (a.fixado === 'sim' ? 1 : 0));
+            
+            container.innerHTML = ''; 
             if (listaFiltrada.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:30px;">${termo ? 'Nenhum tópico encontrado para "' + termo + '".' : 'Nenhum tópico.'}</p>`; return; } 
+            
             listaFiltrada.forEach((t) => { 
                 let idx = cacheTopicosForum.indexOf(t); 
-                let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === t.autor_matricula.toString()) ? `<button class="btn-text-action danger" onclick="event.stopPropagation(); deletarTopicoForum(${idx})">Excluir</button>` : ''; 
-                let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${t.autor_matricula})</span>` : '';
+                let ehMonitor = session.classe === 'monitor';
+                let ehAutor = session.matricula.toString() === t.autor_matricula.toString();
+                
+                let deleteBtn = (ehMonitor || ehAutor) ? `<button class="btn-text-action danger" onclick="event.stopPropagation(); deletarTopicoForum(${idx})">Excluir</button>` : ''; 
+                let fixBtn = ehMonitor ? `<button class="btn-text-action" onclick="event.stopPropagation(); alternarFixarTopico(${idx})">${t.fixado === 'sim' ? 'Desfixar' : 'Fixar'}</button>` : '';
+                
+                let matriculaDisplay = ehMonitor ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${t.autor_matricula})</span>` : '';
                 let avatarHTML = t.autor_foto ? `<img src="${t.autor_foto}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:6px;">` : `<div style="width:24px; height:24px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:6px; font-size: 11px;">${t.autor_nome.charAt(0).toUpperCase()}</div>`;
+                
+                let badgeFixado = t.fixado === 'sim' ? '<span style="background: var(--primary-color); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; margin-right: 8px; vertical-align: middle;">📌 FIXADO</span>' : '';
+                let bordaDestaque = t.fixado === 'sim' ? 'border-color: var(--primary-color);' : '';
+                
                 let textoProc = processarTextoComLinks(t.texto);
-                container.innerHTML += `<div class="forum-topico-card"><div class="forum-topico-header"><div class="forum-topico-title" onclick='abrirTopicoForum(${idx})'>${t.nome_forum}</div>${deleteBtn}</div><div class="forum-topico-meta" style="display:flex; align-items:center;">${avatarHTML} Por: ${t.autor_nome}${matriculaDisplay} • ${t.data_criacao}</div><p class="forum-topico-texto">${textoProc}</p></div>`; 
+                
+                container.innerHTML += `<div class="forum-topico-card" style="${bordaDestaque}"><div class="forum-topico-header"><div class="forum-topico-title" onclick='abrirTopicoForum(${idx})'>${badgeFixado}${t.nome_forum}</div><div>${fixBtn}${deleteBtn}</div></div><div class="forum-topico-meta" style="display:flex; align-items:center;">${avatarHTML} Por: ${t.autor_nome}${matriculaDisplay} • ${t.data_criacao}</div><p class="forum-topico-texto">${textoProc}</p></div>`; 
             }); 
         }
         document.getElementById('busca-forum').addEventListener('input', renderizarTopicosForum);
+        
+        function alternarFixarTopico(idx) {
+            let t = cacheTopicosForum[idx];
+            apiFetch({ action: 'fixar_topico_forum', id_forum: t.id_forum, classe: session.classe }).then(data => {
+                showToast(data.mensagem, data.status !== 'sucesso');
+                if (data.status === 'sucesso') carregarTopicosForum();
+            });
+        }
         
         function abrirTopicoForum(idx) { 
             let topico = cacheTopicosForum[idx]; 
@@ -1337,7 +1337,7 @@
                 cacheMonitores = data.monitores || []; 
                 container.innerHTML = ''; 
                 cacheMonitores.forEach(m => { 
-                    const h = m.horarios || { segunda: '-', terca: '-', quarta: '-', quinta: '-', sexta: '-', sala: '-' }; 
+                    const h = m.horarios || { sala: '-', segunda: '-', terca: '-', quarta: '-', quinta: '-', sexta: '-' }; 
                     const btnEditHTML = (session.classe === 'monitor') ? `<button class="btn-text-action" onclick="abrirModalEditarHorario('${m.email}', '${h.sala}', '${h.segunda}', '${h.terca}', '${h.quarta}', '${h.quinta}', '${h.sexta}')">Editar Horário</button>` : ''; 
                     container.innerHTML += `<div class="monitor-card"><div class="monitor-card-header"><div><div class="monitor-nome">${m.nome}</div><div style="color:var(--text-muted); font-size:14px; margin-top:4px;">${m.email}</div></div>${btnEditHTML}</div><div style="margin-bottom:12px;"><strong>Sala:</strong> ${h.sala}</div><div class="schedule-table-wrapper"><table class="schedule-table"><thead><tr><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th></tr></thead><tbody><tr><td>${formatarHorario(h.segunda)}</td><td>${formatarHorario(h.terca)}</td><td>${formatarHorario(h.quarta)}</td><td>${formatarHorario(h.quinta)}</td><td>${formatarHorario(h.sexta)}</td></tr></tbody></table></div></div>`; 
                 }); 
