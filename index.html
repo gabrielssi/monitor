@@ -785,7 +785,18 @@
         document.getElementById('btn-abrir-modal-senha').addEventListener('click', () => { document.getElementById('form-alt-senha').reset(); document.getElementById('modal-senha').style.display = 'flex'; });
         document.getElementById('btn-abrir-modal-perfil').addEventListener('click', () => { document.getElementById('perfil-foto-url').value = session.foto_perfil || ''; document.getElementById('modal-perfil').style.display = 'flex'; });
         document.getElementById('btn-abrir-modal-topico').addEventListener('click', () => { document.getElementById('form-add-topico').reset(); document.getElementById('modal-topico-forum').style.display = 'flex'; });
+        
         document.getElementById('btn-abrir-modal-modulo').addEventListener('click', () => { document.getElementById('form-add-modulo').reset(); document.getElementById('mod-id').value = ''; document.getElementById('titulo-modal-modulo').textContent = 'Novo Módulo'; document.getElementById('modal-modulo').style.display = 'flex'; });
+        
+        // CORREÇÃO: Restaurado o Event Listener do botão Editar Módulo
+        document.getElementById('btn-editar-modulo').addEventListener('click', () => { 
+            document.getElementById('mod-id').value = currentContext.modulo_id; 
+            document.getElementById('mod-nome').value = currentContext.modulo_nome; 
+            document.getElementById('mod-desc').value = currentContext.modulo_desc; 
+            document.getElementById('mod-oculto').value = currentContext.modulo_oculto; 
+            document.getElementById('titulo-modal-modulo').textContent = 'Editar Módulo'; 
+            document.getElementById('modal-modulo').style.display = 'flex'; 
+        });
         
         document.getElementById('btn-abrir-modal-aula').addEventListener('click', () => { 
             document.getElementById('form-add-aula').reset(); 
@@ -795,7 +806,6 @@
             document.getElementById('modal-aula').style.display = 'flex'; 
         });
 
-        // CORREÇÃO: Listener para abrir o modal de nova pergunta do Quiz
         document.getElementById('btn-abrir-modal-pergunta').addEventListener('click', () => { 
             document.getElementById('form-pergunta-quiz').reset(); 
             document.getElementById('perg-id').value = ''; 
