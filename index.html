@@ -480,7 +480,7 @@
         </div>
     </div>
 
-    <!-- MODAL DE LOADING (NOVO) -->
+    <!-- MODAL DE LOADING -->
     <div class="modal-overlay" id="modal-loading-login" style="z-index: 9999;">
         <div class="modal-content" style="max-width: 350px; text-align: center; background: transparent; border: none; box-shadow: none;">
             <div class="spinner"></div>
@@ -577,10 +577,19 @@
 
         const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
         let width = canvas.width = window.innerWidth; let height = canvas.height = window.innerHeight;
-        window.addEventListener('resize', () => { width = canvas.width = window.innerWidth; height = canvas.height = window.innerHeight; });
+        
+        let animMatrix = true; // Trava para controlar a renderização
+
+        window.addEventListener('resize', () => { 
+            if(!animMatrix) return; // FIX MOBILE: Previne layout thrashing durante uso do painel
+            width = canvas.width = window.innerWidth; 
+            height = canvas.height = window.innerHeight; 
+        });
+        
         const chars = '0123456789ABCDEF{}[];<>/=+#$const let function void return'; const fontSize = 14; const drops = Array(Math.floor(width / fontSize)).fill(1);
         
         function drawMatrix() {
+            if (!animMatrix) return; // Desliga completamente a animação caso logado
             ctx.fillStyle = 'rgba(8, 9, 13, 0.15)'; ctx.fillRect(0, 0, width, height); ctx.font = '700 ' + fontSize + 'px monospace';
             for (let i = 0; i < drops.length; i++) {
                 const text = chars[Math.floor(Math.random() * chars.length)];
@@ -622,7 +631,6 @@
         function fecharModalConfirmacao() { confirmCallback = null; document.getElementById('modal-confirmacao').style.display = 'none'; }
         function confirmarAcaoModal() { if (confirmCallback) { let cb = confirmCallback; confirmCallback = null; cb(); } document.getElementById('modal-confirmacao').style.display = 'none'; }
         
-        // Função de envio à API agora injeta o token automaticamente nas rotas que exigem
         function apiFetch(dataObj) { 
             let fd = new URLSearchParams(); 
             if (session && session.token) fd.append('token', session.token);
@@ -648,7 +656,6 @@
 
         let cacheNotificacoes = [];
         
-        // AGORA RETORNA A PROMISE
         function checarNotificacoes() {
             if (!session || !session.token) return Promise.resolve();
             return apiFetch({ action: 'verificar_notificacoes' }).then(data => {
@@ -715,7 +722,6 @@
             }
         }
 
-        // AGORA RETORNA A PROMISE
         function verificarAlertaPlataforma() {
             return apiFetch({ action: 'obter_alerta' }).then(data => {
                 if (data.status === 'sucesso' && data.alerta && data.alerta.trim() !== '') {
@@ -775,7 +781,6 @@
         }
         function fecharPresencialEIrParaLogin() { document.getElementById('mobile-presencial-overlay').style.display = 'none'; }
 
-        // Requisições deslogadas continuam enviando e.parameter (token não é exigido)
         document.getElementById('form-presencial').addEventListener('submit', e => {
             e.preventDefault();
             let btn = document.getElementById('btn-submit-presencial'); btn.disabled = true; btn.textContent = 'Registrando...';
@@ -861,7 +866,6 @@
             let btn = document.getElementById('btn-submit-login'); btn.disabled = true; btn.textContent = 'Verificando...';
             apiFetch({ action: 'login', email: document.getElementById('form-login').email.value, senha: document.getElementById('form-login').senha.value }).then(data => {
                 if (data.status === 'sucesso') {
-                    // Armazena o token na sessão
                     session = { token: data.token, nome: data.nome, matricula: data.matricula, email: data.email, classe: data.classe, senha_alterada: data.senha_alterada || 'nao', foto_perfil: data.foto_perfil || '', banimento: data.banimento || null };
                     localStorage.setItem('monitoria_session', JSON.stringify(session));
                     ativarPainel();
@@ -877,15 +881,14 @@
             }).finally(() => { btn.disabled = false; btn.textContent = 'Criar Conta'; });
         });
 
-        // AGORA É UMA FUNÇÃO ASSÍNCRONA PARA MOSTRAR O LOADING E PRÉ-CARREGAR AS AULAS
+        // O SISTEMA CARREGA TUDO AGORA EM SEGUNDO PLANO ENQUANTO O MODAL GIRA E DESLIGA A ANIMAÇÃO QUE TRAVAVA O MOBILE
         async function ativarPainel() {
-            // Oculta a tela de Auth, MAS ainda não mostra o dashboard
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('bg-canvas').style.display = 'none'; 
+            animMatrix = false; // DESLIGA A ANIMAÇÃO DO CANVAS para evitar lag e que o teclado mobile feche
             
             let primeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Estudante"; 
             
-            // Exibe modal customizado de Loading
             let loadingModal = document.getElementById('modal-loading-login');
             if (loadingModal) {
                 document.getElementById('loading-user-name').textContent = escaparHtml(primeiroNome);
@@ -900,34 +903,52 @@
                 navAtendimento.textContent = 'Registro Atendimento'; navAvisos.style.display = 'flex'; navQuiz.style.display = 'flex'; if (navFilmes) navFilmes.style.display = 'flex';
                 document.getElementById('btn-compartilhar-site').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-modulo').style.display = 'block';
             } else {
-                navAvisos.style.display = 'none'; document.getElementById('btn-compartilhar-site').style.display = 'none'; document.getElementById('btn-abrir-modal-modulo').style.display = 'none'; verificarVisibilidadeQuizAluno();
+                navAvisos.style.display = 'none'; document.getElementById('btn-compartilhar-site').style.display = 'none'; document.getElementById('btn-abrir-modal-modulo').style.display = 'none'; 
                 let hoje = new Date().getDay(); if (navFilmes) navFilmes.style.display = (hoje === 0 || hoje === 6) ? 'flex' : 'none';
             }
             aplicarRestricoesDeBanimento();
             if (session.classe === 'monitor' || session.senha_alterada === 'sim') { document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; } else { document.getElementById('btn-abrir-modal-senha').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-perfil').style.display = 'none'; }
             
-            // Aguarda TODOS os carregamentos vitais finalizarem por baixo dos panos antes de mostrar o painel
             try {
-                // 1. Carrega o básico em paralelo (Módulos, Notificações, Alertas e Concluídas)
-                await Promise.all([
+                // 1. Array global de promessas preenchendo o cache
+                let promessasGerais = [
                     carregarModulos(),
                     checarNotificacoes(),
                     verificarAlertaPlataforma(),
+                    carregarEExibirMonitores(),
+                    carregarTopicosForum(),
+                    carregarDadosQuiz(),
+                    verificarVisibilidadeQuizAluno(),
                     apiFetch({ action: 'obter_aulas_concluidas' }).then(res => {
                         cacheAulasConcluidas = res.aulas_concluidas || [];
                         aulasConcluidasCarregadas = true;
                     })
-                ]);
+                ];
 
-                // 2. Agora faz o pré-carregamento (cache em lote) de TODAS as aulas de todos os módulos
+                if (navFilmes && navFilmes.style.display !== 'none') promessasGerais.push(carregarFilmes());
+
+                if (session.classe === 'monitor') {
+                    promessasGerais.push(carregarBanidos());
+                    promessasGerais.push(carregarSolicitacoesPendentesMonitor());
+                } else {
+                    promessasGerais.push(apiFetch({ action: 'listar_monitores' }).then(data => {
+                        let select = document.getElementById('atendimento-monitor');
+                        if(select) {
+                            select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
+                            (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; });
+                        }
+                    }));
+                }
+
+                await Promise.all(promessasGerais);
+
+                // 2. Pre-load do banco de aulas
                 if (cacheModulos && cacheModulos.length > 0) {
                     const promessasAulas = cacheModulos.map(m => 
                         apiFetch({ action: 'listar_aulas', id_modulo: m.id_modulo }).then(data => {
                             cacheAulasPorModulo[m.id_modulo] = data.aulas || [];
                         }).catch(err => console.error("Erro ao carregar aulas do módulo", m.id_modulo))
                     );
-                    
-                    // Aguarda as aulas de todos os módulos serem transferidas
                     await Promise.all(promessasAulas);
                 }
 
@@ -935,14 +956,17 @@
                 console.error("Erro no carregamento inicial:", e);
             }
 
-            // Agora sim, esconde o modal de Loading e exibe o dashboard completo, pronto e rápido
             if (loadingModal) loadingModal.style.display = 'none';
             document.getElementById('dashboard-section').style.display = 'flex';
 
             setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
         }
 
-        function verificarVisibilidadeQuizAluno() { apiFetch({ action: 'obter_quiz_dados' }).then(data => { if (data.status === 'sucesso') navQuiz.style.display = (data.visibilidade === 'sim' && !usuarioEstaImpedidoDe('quiz')) ? 'flex' : 'none'; }).catch(() => {}); }
+        function verificarVisibilidadeQuizAluno() { 
+            return apiFetch({ action: 'obter_quiz_dados' }).then(data => { 
+                if (data.status === 'sucesso') navQuiz.style.display = (data.visibilidade === 'sim' && !usuarioEstaImpedidoDe('quiz')) ? 'flex' : 'none'; 
+            }).catch(() => {}); 
+        }
         function usuarioEstaImpedidoDe(tipoAcao) { let ban = session.banimento; if (!ban) return false; if (ban.tipo === 'corretivo') return (tipoAcao === 'forum' || tipoAcao === 'comentar' || tipoAcao === 'filmes'); if (ban.tipo === 'privativo') return (tipoAcao === 'forum' || tipoAcao === 'comentar' || tipoAcao === 'quiz'); return false; }
         function aplicarRestricoesDeBanimento() {
             let ban = session.banimento; if (session.classe === 'monitor') return; 
@@ -961,7 +985,7 @@
 
         let quizTodasPerguntasCache = [], quizPerguntasAtivas = [], quizIndiceAtual = 0, quizTimerInterval = null, pontuacaoSessaoQuiz = 0;
         function carregarDadosQuiz() {
-            apiFetch({ action: 'obter_quiz_dados' }).then(data => {
+            return apiFetch({ action: 'obter_quiz_dados' }).then(data => {
                 if (data.status === 'sucesso') {
                     if (session.classe === 'monitor') { document.getElementById('quiz-execucao-aluno').style.display = 'none'; document.getElementById('quiz-painel-monitor').style.display = 'block'; renderizarRanking(data.ranking || []); carregarPerguntasQuiz();
                     } else {
@@ -1044,7 +1068,6 @@
             apiFetch(payload).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-pergunta-quiz').style.display = 'none'; carregarPerguntasQuiz(); } });
         });
 
-        // AGORA RETORNA A PROMISE
         function carregarModulos() {
             return apiFetch({ action: 'listar_modulos' }).then(data => {
                 cacheModulos = data.modulos || [];
@@ -1285,7 +1308,7 @@
         function carregarFilmes() {
             document.getElementById('btn-abrir-modal-filme').style.display = (session.classe === 'monitor') ? 'inline-block' : 'none';
             const buscaWrapper = document.getElementById('filmes-busca-wrapper');
-            apiFetch({ action: 'listar_filmes' }).then(data => {
+            return apiFetch({ action: 'listar_filmes' }).then(data => {
                 const grid = document.getElementById('filmes-grid'); const avisoBox = document.getElementById('filmes-bloqueado-aviso');
                 if (data.bloqueado) { avisoBox.style.display = 'block'; avisoBox.textContent = data.motivo; grid.innerHTML = ''; buscaWrapper.style.display = 'none'; return; }
                 avisoBox.style.display = 'none';
@@ -1347,26 +1370,9 @@
             }); 
         });
 
-        function carregarComentariosAula() { 
-            apiFetch({ action: 'listar_comentarios', modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { 
-                const list = document.getElementById('comments-list-aula'); list.innerHTML = ''; cacheComentariosAula = data.comentarios || []; 
-                if (cacheComentariosAula.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma dúvida cadastrada.</p>'; return; } 
-                cacheComentariosAula.forEach((c, idx) => { 
-                    let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioAula(${idx})">Excluir</button>` : ''; 
-                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(c.matricula)})</span>` : '';
-                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${escaparHtml(c.nome).charAt(0).toUpperCase()}</div>`;
-                    let textoProc = processarTextoComLinks(c.comentario);
-                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${escaparHtml(c.nome)}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
-                }); 
-            }); 
-        }
-
-        document.getElementById('form-comentario-aula').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', comentario: document.getElementById('texto-comentario-aula').value, modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-aula').value = ''; carregarComentariosAula(); }); });
-        function deletarComentarioAula(idx) { let c = cacheComentariosAula[idx]; abrirModalConfirmacao("Excluir comentário?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.modulo_id, aula: currentContext.aula_id, comentario: c.comentario }).then(() => carregarComentariosAula()); }); }
-
         function carregarTopicosForum() { 
-            if (cacheTopicosForum) { renderizarTopicosForum(); }
-            apiFetch({ action: 'listar_topicos_forum' }).then(data => { cacheTopicosForum = (data.topicos || []).reverse(); renderizarTopicosForum(); }); 
+            if (cacheTopicosForum) { renderizarTopicosForum(); return Promise.resolve(); }
+            return apiFetch({ action: 'listar_topicos_forum' }).then(data => { cacheTopicosForum = (data.topicos || []).reverse(); renderizarTopicosForum(); }); 
         }
 
         function renderizarTopicosForum() { 
@@ -1448,7 +1454,7 @@
         function carregarEExibirMonitores() {
             const container = document.getElementById('monitores-horarios-container'); 
             if (!cacheMonitores) container.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Carregando...</p>';
-            apiFetch({ action: 'listar_monitores' }).then(data => { 
+            return apiFetch({ action: 'listar_monitores' }).then(data => { 
                 cacheMonitores = data.monitores || []; 
                 container.innerHTML = ''; 
                 cacheMonitores.forEach(m => { 
@@ -1462,15 +1468,24 @@
         document.getElementById('form-editar-horario').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'salvar_horario', email_monitor: document.getElementById('edit-horario-email').value, sala: document.getElementById('edit-sala').value, segunda: document.getElementById('edit-segunda').value, terca: document.getElementById('edit-terca').value, quarta: document.getElementById('edit-quarta').value, quinta: document.getElementById('edit-quinta').value, sexta: document.getElementById('edit-sexta').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-editar-horario').style.display = 'none'; carregarEExibirMonitores(); }); });
 
         function prepararTelaAtendimento() { 
-            if (session.classe === 'monitor') { document.getElementById('view-atendimento-aluno').style.display = 'none'; document.getElementById('view-atendimento-monitor').style.display = 'block'; carregarSolicitacoesPendentesMonitor(); 
+            if (session.classe === 'monitor') { 
+                document.getElementById('view-atendimento-aluno').style.display = 'none'; 
+                document.getElementById('view-atendimento-monitor').style.display = 'block'; 
+                carregarSolicitacoesPendentesMonitor(); 
             } else { 
-                document.getElementById('view-atendimento-aluno').style.display = 'block'; document.getElementById('view-atendimento-monitor').style.display = 'none'; 
+                document.getElementById('view-atendimento-aluno').style.display = 'block'; 
+                document.getElementById('view-atendimento-monitor').style.display = 'none'; 
                 let select = document.getElementById('atendimento-monitor');
-                apiFetch({ action: 'listar_monitores' }).then(data => { select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>'; (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; }); });
+                if(select && select.options.length <= 1) { // Só consome API se não estiver carregado, consertando o glitch.
+                    apiFetch({ action: 'listar_monitores' }).then(data => { 
+                        select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>'; 
+                        (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; }); 
+                    });
+                }
             } 
         }
         function carregarSolicitacoesPendentesMonitor() { 
-            apiFetch({ action: 'listar_solicitacoes_pendentes' }).then(data => { 
+            return apiFetch({ action: 'listar_solicitacoes_pendentes' }).then(data => { 
                 const container = document.getElementById('solicitacoes-pendentes-container'); container.innerHTML = ''; 
                 if (data.status === 'erro') { showToast(data.mensagem, true); return; }
                 if (data.solicitacoes && data.solicitacoes.length > 0) { data.solicitacoes.reverse().forEach(sol => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${escaparHtml(sol.nome)} (${escaparHtml(sol.matricula)})</h3><p>Curso: ${escaparHtml(sol.curso)} - Fase: ${escaparHtml(sol.fase)}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="processarSolicitacao('${sol.id}', 'APROVAR')">Aprovar</button><button class="btn-negar" onclick="processarSolicitacao('${sol.id}', 'NEGAR')">Negar</button></div></div>`; }); 
@@ -1488,7 +1503,11 @@
         document.getElementById('form-salvar-aviso').addEventListener('submit', e => { e.preventDefault(); let btn = document.getElementById('btn-submit-aviso'); btn.textContent = 'Enviando...'; btn.disabled = true; apiFetch({ action: 'salvar_alerta', aviso: document.getElementById('input-texto-aviso').value }).then(data => { showToast(data.mensagem); document.getElementById('input-texto-aviso').value = ''; btn.textContent = 'Publicar e Enviar por E-mail'; btn.disabled = false; }).catch(() => { showToast('Houve um erro na requisição.', true); btn.textContent = 'Publicar e Enviar por E-mail'; btn.disabled = false; }); });
         document.getElementById('form-convidar-visitante').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'convidar_visitante', nome: document.getElementById('convite-nome').value, email: document.getElementById('convite-email').value }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') document.getElementById('form-convidar-visitante').reset(); }); });
         document.getElementById('form-banir-usuario').addEventListener('submit', e => { e.preventDefault(); let matricula = document.getElementById('ban-matricula').value, tipo = document.getElementById('ban-tipo').value; abrirModalConfirmacao(`Confirma o banimento ${tipo.toUpperCase()} da matrícula ${matricula}?`, () => { apiFetch({ action: 'banir_usuario', matricula: matricula, tipo: tipo, motivo: document.getElementById('ban-motivo').value }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('form-banir-usuario').reset(); carregarBanidos(); } }); }); });
-        function carregarBanidos() { if (session.classe !== 'monitor') return; apiFetch({ action: 'listar_banidos' }).then(data => { const container = document.getElementById('lista-banidos-container'); if (!container) return; container.innerHTML = ''; if (!data.banidos || data.banidos.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Nenhum usuário banido.</p>'; return; } data.banidos.forEach(b => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${escaparHtml(b.matricula)} — ${escaparHtml(b.tipo).toUpperCase()}</h3><p>${escaparHtml(b.motivo) || 'Sem motivo informado.'}${b.tipo === 'corretivo' ? ' • Até ' + escaparHtml(b.data_fim) : ''}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="desbanirUsuario('${escapeParaJS(b.matricula)}')">Remover Ban</button></div></div>`; }); }); }
+        
+        function carregarBanidos() { 
+            if (session.classe !== 'monitor') return Promise.resolve(); 
+            return apiFetch({ action: 'listar_banidos' }).then(data => { const container = document.getElementById('lista-banidos-container'); if (!container) return; container.innerHTML = ''; if (!data.banidos || data.banidos.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Nenhum usuário banido.</p>'; return; } data.banidos.forEach(b => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${escaparHtml(b.matricula)} — ${escaparHtml(b.tipo).toUpperCase()}</h3><p>${escaparHtml(b.motivo) || 'Sem motivo informado.'}${b.tipo === 'corretivo' ? ' • Até ' + escaparHtml(b.data_fim) : ''}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="desbanirUsuario('${escapeParaJS(b.matricula)}')">Remover Ban</button></div></div>`; }); }); 
+        }
         function desbanirUsuario(matricula) { abrirModalConfirmacao("Remover o banimento deste usuário?", () => { apiFetch({ action: 'desbanir_usuario', matricula: matricula }).then(data => { showToast(data.mensagem); carregarBanidos(); }); }); }
         
         document.getElementById('form-alt-senha').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'alterar_senha', nova_senha: document.getElementById('pass-nova').value }).then(data => { showToast(data.mensagem); session.senha_alterada = 'sim'; document.getElementById('modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; localStorage.setItem('monitoria_session', JSON.stringify(session)); }); });
