@@ -257,7 +257,7 @@
                 <div class="header"><h1>Monitoria de Informática</h1><p id="header-text">Faça login com seu e-mail institucional</p></div>
                 <form id="form-login">
                     <input type="hidden" name="action" value="login">
-                    <div class="form-group"><label>E-mail Institucional</label><input type="email" name="email" required pattern="[^\s@]+@(aluno\.)?ifsc\.edu\.br" title="Use seu e-mail institucional (@aluno.ifsc.edu.br ou @ifsc.edu.br)" placeholder="aluno@aluno.ifsc.edu.br"></div>
+                    <div class="form-group"><label>E-mail de Acesso</label><input type="email" name="email" required placeholder="Seu e-mail cadastrado"></div>
                     <div class="form-group"><label>Senha</label><input type="password" name="senha" required placeholder="Sua senha"></div>
                     <button type="submit" class="btn-submit" id="btn-submit-login">Entrar</button>
                     <div style="text-align: right; margin-top: 10px;">
@@ -525,13 +525,13 @@
             <div class="header" style="margin-bottom: 20px;">
                 <h1 style="font-size: 24px;">Recuperar Senha</h1>
                 <p style="color: var(--text-muted); font-size: 14px; margin-top: 8px; line-height: 1.5;">
-                    Enviaremos uma senha temporária para o seu e-mail institucional.
+                    Enviaremos uma senha temporária para o seu e-mail cadastrado.
                 </p>
             </div>
             <form id="form-esqueci-senha">
                 <div class="form-group">
-                    <label>E-mail Institucional</label>
-                    <input type="email" id="esqueci-email" required pattern="[^\s@]+@(aluno\.)?ifsc\.edu\.br" title="Use seu e-mail institucional (@aluno.ifsc.edu.br ou @ifsc.edu.br)" placeholder="aluno@aluno.ifsc.edu.br">
+                    <label>E-mail Cadastrado</label>
+                    <input type="email" id="esqueci-email" required placeholder="Digite o e-mail da sua conta">
                 </div>
                 <button type="submit" class="btn-submit">Enviar Nova Senha</button>
             </form>
