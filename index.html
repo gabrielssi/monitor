@@ -1098,13 +1098,39 @@
         }
 
         let cacheAulasDoModulo = [];
-        function carregarAulas() {
+        let cacheAulasPorModulo = {}; 
+        let aulasConcluidasCarregadas = false;
+
+        function carregarAulas(forcarAtualizacao = false) {
             document.getElementById('busca-aulas').value = '';
-            apiFetch({ action: 'obter_aulas_concluidas' }).then(resConcluidas => {
-                cacheAulasConcluidas = resConcluidas.aulas_concluidas || [];
-                apiFetch({ action: 'listar_aulas', id_modulo: currentContext.modulo_id }).then(data => { cacheAulasDoModulo = data.aulas || []; renderizarAulas(cacheAulasDoModulo); });
-            });
+            const grid = document.getElementById('aulas-grid');
+
+            const buscarEExibir = () => {
+                if (!forcarAtualizacao && cacheAulasPorModulo[currentContext.modulo_id]) {
+                    cacheAulasDoModulo = cacheAulasPorModulo[currentContext.modulo_id];
+                    renderizarAulas(cacheAulasDoModulo);
+                } else {
+                    grid.innerHTML = '<p style="color:var(--text-muted); padding: 10px 0;">Carregando aulas...</p>';
+                    
+                    apiFetch({ action: 'listar_aulas', id_modulo: currentContext.modulo_id }).then(data => { 
+                        cacheAulasDoModulo = data.aulas || []; 
+                        cacheAulasPorModulo[currentContext.modulo_id] = cacheAulasDoModulo; 
+                        renderizarAulas(cacheAulasDoModulo); 
+                    });
+                }
+            };
+
+            if (!aulasConcluidasCarregadas) {
+                apiFetch({ action: 'obter_aulas_concluidas' }).then(resConcluidas => {
+                    cacheAulasConcluidas = resConcluidas.aulas_concluidas || [];
+                    aulasConcluidasCarregadas = true;
+                    buscarEExibir();
+                });
+            } else {
+                buscarEExibir();
+            }
         }
+
         function extrairIdGoogleDrive(url) { if (!url) return null; let u = extrairSrc(url); try { if (u.includes('/file/d/')) return u.split('/file/d/')[1].split('/')[0]; if (u.includes('drive.google.com/open?id=')) return u.split('id=')[1].split('&')[0]; if (u.includes('drive.google.com/uc?id=')) return u.split('id=')[1].split('&')[0]; } catch(e) {} return null; }
         
         function abrirModalEditarAula(id, nome, link, desc, anexo) { 
@@ -1156,7 +1182,7 @@
         }
         document.getElementById('busca-aulas').addEventListener('input', function() { let termo = this.value.trim().toLowerCase(); let filtradas = termo ? cacheAulasDoModulo.filter(a => (a.nome_aula || '').toLowerCase().includes(termo)) : cacheAulasDoModulo; renderizarAulas(filtradas); });
         function atualizarEstadoBotaoConcluir(aulaId) { let btnConcluir = document.getElementById('btn-concluir-aula'); if (cacheAulasConcluidas.includes(aulaId)) { btnConcluir.className = 'btn-concluir concluida'; btnConcluir.innerHTML = '<span>✓</span> Aula Concluída'; } else { btnConcluir.className = 'btn-concluir'; btnConcluir.innerHTML = '<span>✓</span> Marcar como Concluída'; } }
-        function deletarAula(id) { abrirModalConfirmacao("Tem certeza que deseja excluir esta aula?", () => { apiFetch({ action: 'deletar_aula', aula_id: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarAulas(); }); }); }
+        function deletarAula(id) { abrirModalConfirmacao("Tem certeza que deseja excluir esta aula?", () => { apiFetch({ action: 'deletar_aula', aula_id: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarAulas(true); }); }); }
         document.getElementById('btn-voltar-modulo').addEventListener('click', () => { document.getElementById('iframe-video').src = ''; document.getElementById('view-aula').style.display = 'none'; document.getElementById('view-modulo').style.display = 'block'; carregarAulas(); });
         
         document.getElementById('form-add-modulo').addEventListener('submit', e => { e.preventDefault(); let modId = document.getElementById('mod-id').value; apiFetch({ action: modId ? 'editar_modulo' : 'cadastrar_modulo', id_modulo: modId, nome: document.getElementById('mod-nome').value, descricao: document.getElementById('mod-desc').value, oculto: document.getElementById('mod-oculto').value }).then(data => { showToast(data.mensagem); document.getElementById('modal-modulo').style.display = 'none'; carregarModulos(); }); });
@@ -1175,7 +1201,7 @@
             }).then(data => { 
                 showToast(data.mensagem); 
                 document.getElementById('modal-aula').style.display = 'none'; 
-                carregarAulas(); 
+                carregarAulas(true); 
             }); 
         });
 
