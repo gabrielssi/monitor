@@ -239,7 +239,7 @@
             <h2 style="margin-bottom: 12px; font-size: 22px;">Presença Solicitada!</h2>
             <p style="color: var(--text-muted); margin-bottom: 25px; line-height: 1.5; font-size: 14px;">Que tal acessar nossos conteúdos, quizzes e monitorias online de casa? Crie sua conta informando apenas seu e-mail!</p>
             <form id="form-presencial-cadastro">
-                <div class="form-group" style="text-align: left;"><label>Seu E-mail Institucional</label><input type="email" id="presencial-email" required pattern="[^\s@]+@aluno\.ifsc\.edu\.br" title="Use seu e-mail institucional terminado em @aluno.ifsc.edu.br" placeholder="aluno@aluno.ifsc.edu.br"></div>
+                <div class="form-group" style="text-align: left;"><label>Seu E-mail Institucional</label><input type="email" id="presencial-email" required pattern="[^\s@]+@(aluno\.)?ifsc\.edu\.br" title="Use seu e-mail institucional (@aluno.ifsc.edu.br ou @ifsc.edu.br)" placeholder="aluno@aluno.ifsc.edu.br"></div>
                 <button type="submit" class="btn-submit" id="btn-submit-presencial-cad" style="margin-bottom: 15px;">Criar Minha Conta</button>
                 <button type="button" class="btn-text-action" style="width: 100%; border: none; font-size: 14px;" onclick="fecharPresencialEIrParaLogin()">Não, obrigado</button>
             </form>
@@ -257,15 +257,18 @@
                 <div class="header"><h1>Monitoria de Informática</h1><p id="header-text">Faça login com seu e-mail institucional</p></div>
                 <form id="form-login">
                     <input type="hidden" name="action" value="login">
-                    <div class="form-group"><label>E-mail Institucional</label><input type="email" name="email" required placeholder="aluno@aluno.ifsc.edu.br"></div>
+                    <div class="form-group"><label>E-mail Institucional</label><input type="email" name="email" required pattern="[^\s@]+@(aluno\.)?ifsc\.edu\.br" title="Use seu e-mail institucional (@aluno.ifsc.edu.br ou @ifsc.edu.br)" placeholder="aluno@aluno.ifsc.edu.br"></div>
                     <div class="form-group"><label>Senha</label><input type="password" name="senha" required placeholder="Sua senha"></div>
                     <button type="submit" class="btn-submit" id="btn-submit-login">Entrar</button>
+                    <div style="text-align: right; margin-top: 10px;">
+                        <a href="#" id="link-esqueci-senha" style="font-size: 12px; color: var(--primary-color); text-decoration: none;">Esqueci minha senha</a>
+                    </div>
                 </form>
                 <form id="form-cadastro" style="display:none;">
                     <input type="hidden" name="action" value="cadastro">
                     <div class="form-group"><label>Matrícula (11 a 12 dígitos)</label><input type="text" inputmode="numeric" pattern="\d{11,12}" title="Digite apenas números, de 11 a 12 dígitos" maxlength="12" name="matricula" required placeholder="Ex: 20261020301"></div>
                     <div class="form-group"><label>Nome</label><input type="text" name="nome" required placeholder="Seu nome completo"></div>
-                    <div class="form-group"><label>E-mail (IFSC)</label><input type="email" name="email" required pattern="[^\s@]+@aluno\.ifsc\.edu\.br" title="Use seu e-mail institucional terminado em @aluno.ifsc.edu.br" placeholder="aluno@aluno.ifsc.edu.br"></div>
+                    <div class="form-group"><label>E-mail (IFSC)</label><input type="email" name="email" required pattern="[^\s@]+@(aluno\.)?ifsc\.edu\.br" title="Use seu e-mail institucional (@aluno.ifsc.edu.br ou @ifsc.edu.br)" placeholder="aluno@aluno.ifsc.edu.br"></div>
                     <button type="submit" class="btn-submit" id="btn-submit-cadastro">Criar Conta</button>
                 </form>
                 <div id="status-message" class="status-message"></div>
@@ -500,7 +503,21 @@
     <div class="modal-overlay" id="modal-compartilhar"><div class="modal-content" style="max-width: 380px; text-align: center;"><span class="close-modal" onclick="document.getElementById('modal-compartilhar').style.display='none'">&times;</span><div class="header"><h1>Compartilhar (QR Presencial)</h1></div><div style="background: #fff; padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 20px;"><img id="qrcode-img" src="" alt="QR" style="width: 200px; height: 200px; display: block;"></div><p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Este QR Code abre direto na tela de Registro de Presença.</p><button class="btn-submit" onclick="copiarLinkSite()">Copiar Link</button></div></div>
     <div class="modal-overlay" id="modal-editar-horario"><div class="modal-content" style="max-width: 600px;"><span class="close-modal" onclick="document.getElementById('modal-editar-horario').style.display='none'">&times;</span><div class="header"><h1>Editar Horário</h1></div><form id="form-editar-horario"><input type="hidden" id="edit-horario-email"><div class="form-group"><label>Sala</label><input type="text" id="edit-sala" required></div><div class="form-group"><label>Segunda</label><input type="text" id="edit-segunda"></div><div class="form-group"><label>Terça</label><input type="text" id="edit-terca"></div><div class="form-group"><label>Quarta</label><input type="text" id="edit-quarta"></div><div class="form-group"><label>Quinta</label><input type="text" id="edit-quinta"></div><div class="form-group"><label>Sexta</label><input type="text" id="edit-sexta"></div><button type="submit" class="btn-submit">Salvar Horário</button></form></div></div>
     <div class="modal-overlay" id="modal-topico-forum"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-topico-forum').style.display='none'">&times;</span><div class="header"><h1>Novo Tópico</h1></div><form id="form-add-topico"><div class="form-group"><label>Título</label><input type="text" id="topico-titulo" required maxlength="120"></div><div class="form-group"><label>Texto</label><textarea id="topico-texto" rows="5" required maxlength="500"></textarea></div><button type="submit" class="btn-submit">Publicar Tópico</button></form></div></div>
-    <div class="modal-overlay" id="modal-senha"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-senha').style.display='none'">&times;</span><div class="header"><h1>Alterar Senha</h1></div><form id="form-alt-senha"><div class="form-group"><label>Nova Senha (mínimo 8 caracteres)</label><input type="password" id="pass-nova" minlength="8" required></div><button type="submit" class="btn-submit">Atualizar Senha</button></form></div></div>
+    
+    <!-- MODAL DE SENHA ATUALIZADO -->
+    <div class="modal-overlay" id="modal-senha">
+        <div class="modal-content">
+            <span class="close-modal" onclick="document.getElementById('modal-senha').style.display='none'">&times;</span>
+            <div class="header"><h1>Alterar Senha</h1></div>
+            <form id="form-alt-senha">
+                <div class="form-group"><label>Senha Atual</label><input type="password" id="pass-atual" required></div>
+                <div class="form-group"><label>Nova Senha (mínimo 8 caracteres)</label><input type="password" id="pass-nova" minlength="8" required></div>
+                <div class="form-group"><label>Confirmar Nova Senha</label><input type="password" id="pass-confirma" minlength="8" required></div>
+                <button type="submit" class="btn-submit">Atualizar Senha</button>
+            </form>
+        </div>
+    </div>
+    
     <div class="modal-overlay" id="modal-perfil"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-perfil').style.display='none'">&times;</span><div class="header"><h1>Foto de Perfil</h1></div><form id="form-atualizar-perfil"><div class="form-group"><label>URL da Foto</label><input type="url" id="perfil-foto-url" required></div><button type="submit" class="btn-submit">Salvar Perfil</button></form></div></div>
     <div class="modal-overlay" id="modal-modulo"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-modulo').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-modulo">Módulo</h1></div><form id="form-add-modulo"><input type="hidden" id="mod-id"><div class="form-group"><label>Nome</label><input type="text" id="mod-nome" required></div><div class="form-group"><label>Descrição</label><input type="text" id="mod-desc"></div><div class="form-group"><label>Ocultar para Alunos?</label><select id="mod-oculto"><option value="não">Não</option><option value="sim">Sim</option></select></div><button type="submit" class="btn-submit">Salvar Módulo</button></form></div></div>
     
@@ -642,7 +659,6 @@
             .then(res => res.json())
             .then(data => {
                 // SÓ RELOADA A PÁGINA SE O USUÁRIO TINHA UMA SESSÃO ANTES. 
-                // Se a API mandar relogar antes de fazermos login, a gente ignora pra não dar loop infinito!
                 if (data.logout_necessario && session && !isReloading) {
                     isReloading = true;
                     session = null; 
@@ -896,6 +912,22 @@
                     ativarPainel();
                 } else if(data) { showToast(data.mensagem, true); }
             }).finally(() => { btn.disabled = false; btn.textContent = 'Entrar'; });
+        });
+
+        // NOVO LISTENER: ESQUECI MINHA SENHA
+        document.getElementById('link-esqueci-senha').addEventListener('click', (e) => {
+            e.preventDefault();
+            let email = prompt("Digite seu e-mail institucional para recuperar a senha:");
+            if (!email) return;
+            
+            if (!/^[^\s@]+@(aluno\.)?ifsc\.edu\.br$/i.test(email)) {
+                showToast("Digite um e-mail institucional válido.", true);
+                return;
+            }
+
+            apiFetch({ action: 'recuperar_senha', email: email }).then(data => {
+                if (data) showToast(data.mensagem, data.status !== 'sucesso');
+            });
         });
 
         document.getElementById('form-cadastro').addEventListener('submit', e => {
@@ -1471,6 +1503,35 @@
             }); 
         }
 
+        // NOVO LISTENER: ALTERAR SENHA
+        document.getElementById('form-alt-senha').addEventListener('submit', e => { 
+            e.preventDefault(); 
+            let atual = document.getElementById('pass-atual').value;
+            let nova = document.getElementById('pass-nova').value;
+            let confirma = document.getElementById('pass-confirma').value;
+
+            if(nova !== confirma) {
+                showToast("As senhas novas não coincidem!", true);
+                return;
+            }
+
+            let btn = e.target.querySelector('button');
+            btn.disabled = true; btn.textContent = "Atualizando...";
+
+            apiFetch({ action: 'alterar_senha', senha_atual: atual, nova_senha: nova }).then(data => { 
+                if(data) showToast(data.mensagem, data.status !== 'sucesso'); 
+                if(data && data.status === 'sucesso') {
+                    session.senha_alterada = 'sim'; 
+                    document.getElementById('modal-senha').style.display = 'none'; 
+                    document.getElementById('btn-abrir-modal-senha').style.display = 'none'; 
+                    document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; 
+                    localStorage.setItem('monitoria_session', JSON.stringify(session)); 
+                    document.getElementById('form-alt-senha').reset();
+                }
+                btn.disabled = false; btn.textContent = "Atualizar Senha";
+            }); 
+        });
+
         document.getElementById('form-comentario-forum').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', comentario: document.getElementById('texto-comentario-forum').value, modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { if (data && data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-forum').value = ''; carregarComentariosForum(); }); });
         function deletarComentarioForum(idx) { let c = cacheComentariosForum[idx]; abrirModalConfirmacao("Excluir resposta?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.forum_topico_id, aula: 'forum', comentario: c.comentario }).then(() => carregarComentariosForum()); }); }
 
@@ -1537,7 +1598,6 @@
         }
         function desbanirUsuario(matricula) { abrirModalConfirmacao("Remover o banimento deste usuário?", () => { apiFetch({ action: 'desbanir_usuario', matricula: matricula }).then(data => { if(data) showToast(data.mensagem); carregarBanidos(); }); }); }
         
-        document.getElementById('form-alt-senha').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'alterar_senha', nova_senha: document.getElementById('pass-nova').value }).then(data => { if(data) showToast(data.mensagem); session.senha_alterada = 'sim'; document.getElementById('modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; localStorage.setItem('monitoria_session', JSON.stringify(session)); }); });
         document.getElementById('form-atualizar-perfil').addEventListener('submit', e => { e.preventDefault(); let novaFoto = document.getElementById('perfil-foto-url').value; apiFetch({ action: 'atualizar_perfil', foto_perfil: novaFoto }).then(data => { if(data) showToast(data.mensagem); session.foto_perfil = novaFoto; localStorage.setItem('monitoria_session', JSON.stringify(session)); document.getElementById('modal-perfil').style.display = 'none'; let avatarHeader = document.getElementById('display-user-avatar'); if (novaFoto) { avatarHeader.src = novaFoto; avatarHeader.style.display = 'block'; } }); });
     </script>
 </body>
