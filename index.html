@@ -188,6 +188,15 @@
         .comment-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
         .link-destaque { color: var(--primary-color); text-decoration: none; font-weight: 600; }
         .link-destaque:hover { text-decoration: underline; }
+
+        /* Animação do Spinner Loading */
+        .spinner {
+            width: 50px; height: 50px;
+            border: 4px solid rgba(236, 72, 153, 0.2); border-top: 4px solid var(--primary-color);
+            border-radius: 50%; margin: 0 auto 20px auto;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
     </style>
 </head>
 <body>
@@ -471,6 +480,15 @@
         </div>
     </div>
 
+    <!-- MODAL DE LOADING (NOVO) -->
+    <div class="modal-overlay" id="modal-loading-login" style="z-index: 9999;">
+        <div class="modal-content" style="max-width: 350px; text-align: center; background: transparent; border: none; box-shadow: none;">
+            <div class="spinner"></div>
+            <h2 style="color: #fff; margin-bottom: 10px; font-size: 24px;">Olá, <span id="loading-user-name"></span>!</h2>
+            <p style="color: var(--primary-color); font-weight: 600; font-size: 15px;">Preparando seu ambiente de estudos...</p>
+        </div>
+    </div>
+
     <div class="toast-notification" id="toast-notification">Mensagem</div>
 
     <!-- MODAIS DO SISTEMA -->
@@ -629,9 +647,11 @@
         window.addEventListener('click', () => { document.getElementById('notification-dropdown').style.display = 'none'; document.getElementById('menu-usuario-dropdown').style.display = 'none'; });
 
         let cacheNotificacoes = [];
+        
+        // AGORA RETORNA A PROMISE
         function checarNotificacoes() {
-            if (!session || !session.token) return;
-            apiFetch({ action: 'verificar_notificacoes' }).then(data => {
+            if (!session || !session.token) return Promise.resolve();
+            return apiFetch({ action: 'verificar_notificacoes' }).then(data => {
                 if (data.status === 'sucesso' && data.notificacoes) {
                     cacheNotificacoes = data.notificacoes;
                     let listContent = document.getElementById('notification-list-content'); let dot = document.getElementById('dot-notificacao');
@@ -695,8 +715,9 @@
             }
         }
 
+        // AGORA RETORNA A PROMISE
         function verificarAlertaPlataforma() {
-            apiFetch({ action: 'obter_alerta' }).then(data => {
+            return apiFetch({ action: 'obter_alerta' }).then(data => {
                 if (data.status === 'sucesso' && data.alerta && data.alerta.trim() !== '') {
                     if (window.ultimo_aviso_visto !== data.alerta.trim()) { 
                         document.getElementById('texto-alerta-modal').textContent = data.alerta.trim(); 
@@ -856,11 +877,22 @@
             }).finally(() => { btn.disabled = false; btn.textContent = 'Criar Conta'; });
         });
 
-        function ativarPainel() {
-            document.getElementById('auth-section').style.display = 'none'; document.getElementById('dashboard-section').style.display = 'flex';
+        // AGORA É UMA FUNÇÃO ASSÍNCRONA PARA MOSTRAR O LOADING
+        async function ativarPainel() {
+            // Oculta a tela de Auth, MAS ainda não mostra o dashboard
+            document.getElementById('auth-section').style.display = 'none';
             document.getElementById('bg-canvas').style.display = 'none'; 
             
-            let primeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Usuário"; document.getElementById('display-user-name').textContent = `Olá, ${escaparHtml(primeiroNome)}`;
+            let primeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Estudante"; 
+            
+            // Exibe modal customizado de Loading
+            let loadingModal = document.getElementById('modal-loading-login');
+            if (loadingModal) {
+                document.getElementById('loading-user-name').textContent = escaparHtml(primeiroNome);
+                loadingModal.style.display = 'flex';
+            }
+
+            document.getElementById('display-user-name').textContent = `Olá, ${escaparHtml(primeiroNome)}`;
             let avatarHeader = document.getElementById('display-user-avatar');
             if (session.foto_perfil) { avatarHeader.src = session.foto_perfil; avatarHeader.style.display = 'block'; } else { avatarHeader.style.display = 'none'; }
 
@@ -873,7 +905,23 @@
             }
             aplicarRestricoesDeBanimento();
             if (session.classe === 'monitor' || session.senha_alterada === 'sim') { document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; } else { document.getElementById('btn-abrir-modal-senha').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-perfil').style.display = 'none'; }
-            carregarModulos(); checarNotificacoes(); verificarAlertaPlataforma(); setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
+            
+            // Aguarda TODOS os carregamentos vitais finalizarem por baixo dos panos antes de mostrar
+            try {
+                await Promise.all([
+                    carregarModulos(),
+                    checarNotificacoes(),
+                    verificarAlertaPlataforma()
+                ]);
+            } catch (e) {
+                console.error("Erro no carregamento inicial:", e);
+            }
+
+            // Agora sim, esconde o modal de Loading e exibe o dashboard completo, sem piscar
+            if (loadingModal) loadingModal.style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'flex';
+
+            setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
         }
 
         function verificarVisibilidadeQuizAluno() { apiFetch({ action: 'obter_quiz_dados' }).then(data => { if (data.status === 'sucesso') navQuiz.style.display = (data.visibilidade === 'sim' && !usuarioEstaImpedidoDe('quiz')) ? 'flex' : 'none'; }).catch(() => {}); }
@@ -978,8 +1026,9 @@
             apiFetch(payload).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-pergunta-quiz').style.display = 'none'; carregarPerguntasQuiz(); } });
         });
 
+        // AGORA RETORNA A PROMISE
         function carregarModulos() {
-            apiFetch({ action: 'listar_modulos' }).then(data => {
+            return apiFetch({ action: 'listar_modulos' }).then(data => {
                 cacheModulos = data.modulos || [];
                 renderizarModulos(cacheModulos);
             });
