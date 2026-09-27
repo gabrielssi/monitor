@@ -37,7 +37,6 @@
             font-family: 'Inter', sans-serif; 
             background: #0c0d10; color: var(--text-main); min-height: 100vh; 
             display: flex; justify-content: center; align-items: center; overflow-x: hidden; position: relative;
-            overscroll-behavior-y: none; /* Impede pull-to-refresh nativo em mobiles */
         }
 
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; opacity: 0.35; display: block; }
@@ -561,6 +560,7 @@
             return txt; 
         }
 
+        // Função segura para escapar HTML antes de inserções no DOM
         function escaparHtml(texto) { 
             if (!texto) return '';
             return String(texto)
@@ -578,10 +578,10 @@
         const canvas = document.getElementById('bg-canvas'); const ctx = canvas.getContext('2d');
         let width = canvas.width = window.innerWidth; let height = canvas.height = window.innerHeight;
         
-        let animMatrix = true;
+        let animMatrix = true; // Trava para controlar a renderização
 
         window.addEventListener('resize', () => { 
-            if(!animMatrix) return;
+            if(!animMatrix) return; // FIX MOBILE: Previne layout thrashing durante uso do painel
             width = canvas.width = window.innerWidth; 
             height = canvas.height = window.innerHeight; 
         });
@@ -589,7 +589,7 @@
         const chars = '0123456789ABCDEF{}[];<>/=+#$const let function void return'; const fontSize = 14; const drops = Array(Math.floor(width / fontSize)).fill(1);
         
         function drawMatrix() {
-            if (!animMatrix) return;
+            if (!animMatrix) return; // Desliga completamente a animação caso logado
             ctx.fillStyle = 'rgba(8, 9, 13, 0.15)'; ctx.fillRect(0, 0, width, height); ctx.font = '700 ' + fontSize + 'px monospace';
             for (let i = 0; i < drops.length; i++) {
                 const text = chars[Math.floor(Math.random() * chars.length)];
@@ -772,9 +772,11 @@
             if (isViaQR || isMobile) { abrirTelaPresencialMobile(); }
         });
 
-        function abrirTelaPresencialMobile() {
+function abrirTelaPresencialMobile() {
+            // ADICIONADO: Desliga a animação e o canvas imediatamente na tela presencial
             animMatrix = false; 
             document.getElementById('bg-canvas').style.display = 'none';
+
             document.getElementById('mobile-presencial-overlay').style.display = 'flex';
             apiFetch({ action: 'listar_monitores' }).then(data => {
                 let select = document.getElementById('presencial-monitor'); select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
@@ -883,11 +885,11 @@
             }).finally(() => { btn.disabled = false; btn.textContent = 'Criar Conta'; });
         });
 
-        // O SISTEMA CARREGA O ESSENCIAL PRIMEIRO, LIBERA A TELA E DEPOIS BAIXA O RESTO EM FILA PARA NÃO TRAVAR
+        // O SISTEMA CARREGA TUDO AGORA EM SEGUNDO PLANO ENQUANTO O MODAL GIRA E DESLIGA A ANIMAÇÃO QUE TRAVAVA O MOBILE
         async function ativarPainel() {
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('bg-canvas').style.display = 'none'; 
-            animMatrix = false; 
+            animMatrix = false; // DESLIGA A ANIMAÇÃO DO CANVAS para evitar lag e que o teclado mobile feche
             
             let primeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Estudante"; 
             
@@ -912,73 +914,56 @@
             if (session.classe === 'monitor' || session.senha_alterada === 'sim') { document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; } else { document.getElementById('btn-abrir-modal-senha').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-perfil').style.display = 'none'; }
             
             try {
-                // 1. Carrega apenas a espinha dorsal (módulos) para o aluno ver algo na tela rápido
-                await carregarModulos();
+                // 1. Array global de promessas preenchendo o cache
+                let promessasGerais = [
+                    carregarModulos(),
+                    checarNotificacoes(),
+                    verificarAlertaPlataforma(),
+                    carregarEExibirMonitores(),
+                    carregarTopicosForum(),
+                    carregarDadosQuiz(),
+                    verificarVisibilidadeQuizAluno(),
+                    apiFetch({ action: 'obter_aulas_concluidas' }).then(res => {
+                        cacheAulasConcluidas = res.aulas_concluidas || [];
+                        aulasConcluidasCarregadas = true;
+                    })
+                ];
 
-                if (loadingModal) loadingModal.style.display = 'none';
-                document.getElementById('dashboard-section').style.display = 'flex';
+                if (navFilmes && navFilmes.style.display !== 'none') promessasGerais.push(carregarFilmes());
 
-                // 2. Fila sequencial (Background loader). 
-                // Impede que as 10 requisições disparem ao mesmo tempo e estressem a rede do celular causando um "Refresh" forçado
-                (async () => {
-                    let backgroundTasks = [
-                        checarNotificacoes,
-                        verificarAlertaPlataforma,
-                        carregarEExibirMonitores,
-                        carregarTopicosForum,
-                        carregarDadosQuiz,
-                        verificarVisibilidadeQuizAluno,
-                        async () => {
-                            let res = await apiFetch({ action: 'obter_aulas_concluidas' });
-                            cacheAulasConcluidas = res.aulas_concluidas || [];
-                            aulasConcluidasCarregadas = true;
+                if (session.classe === 'monitor') {
+                    promessasGerais.push(carregarBanidos());
+                    promessasGerais.push(carregarSolicitacoesPendentesMonitor());
+                } else {
+                    promessasGerais.push(apiFetch({ action: 'listar_monitores' }).then(data => {
+                        let select = document.getElementById('atendimento-monitor');
+                        if(select) {
+                            select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
+                            (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; });
                         }
-                    ];
+                    }));
+                }
 
-                    if (navFilmes && navFilmes.style.display !== 'none') backgroundTasks.push(carregarFilmes);
+                await Promise.all(promessasGerais);
 
-                    if (session.classe === 'monitor') {
-                        backgroundTasks.push(carregarBanidos);
-                        backgroundTasks.push(carregarSolicitacoesPendentesMonitor);
-                    } else {
-                        backgroundTasks.push(async () => {
-                            let data = await apiFetch({ action: 'listar_monitores' });
-                            let select = document.getElementById('atendimento-monitor');
-                            if(select) {
-                                select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
-                                (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; });
-                            }
-                        });
-                    }
-
-                    // Loop pausado. Puxa os dados com 200ms de respiro entre eles
-                    for (let task of backgroundTasks) {
-                        try { 
-                            await task(); 
-                            await new Promise(r => setTimeout(r, 200)); 
-                        } catch (e) { console.error(e); }
-                    }
-
-                    // 3. Puxa o conteúdo de todas as aulas aos poucos também
-                    if (cacheModulos && cacheModulos.length > 0) {
-                        for (let m of cacheModulos) {
-                            try {
-                                let data = await apiFetch({ action: 'listar_aulas', id_modulo: m.id_modulo });
-                                cacheAulasPorModulo[m.id_modulo] = data.aulas || [];
-                                await new Promise(r => setTimeout(r, 200));
-                            } catch(err) { }
-                        }
-                    }
-                })();
+                // 2. Pre-load do banco de aulas
+                if (cacheModulos && cacheModulos.length > 0) {
+                    const promessasAulas = cacheModulos.map(m => 
+                        apiFetch({ action: 'listar_aulas', id_modulo: m.id_modulo }).then(data => {
+                            cacheAulasPorModulo[m.id_modulo] = data.aulas || [];
+                        }).catch(err => console.error("Erro ao carregar aulas do módulo", m.id_modulo))
+                    );
+                    await Promise.all(promessasAulas);
+                }
 
             } catch (e) {
                 console.error("Erro no carregamento inicial:", e);
-                if (loadingModal) loadingModal.style.display = 'none';
-                document.getElementById('dashboard-section').style.display = 'flex';
             }
 
-            // Intervalo ajustado para ser mais amigável ao mobile (15 segundos)
-            setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 15000);
+            if (loadingModal) loadingModal.style.display = 'none';
+            document.getElementById('dashboard-section').style.display = 'flex';
+
+            setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
         }
 
         function verificarVisibilidadeQuizAluno() { 
@@ -1495,7 +1480,7 @@
                 document.getElementById('view-atendimento-aluno').style.display = 'block'; 
                 document.getElementById('view-atendimento-monitor').style.display = 'none'; 
                 let select = document.getElementById('atendimento-monitor');
-                if(select && select.options.length <= 1) { // Evita requisitar toda hora se já tiver populado
+                if(select && select.options.length <= 1) { // Só consome API se não estiver carregado, consertando o glitch.
                     apiFetch({ action: 'listar_monitores' }).then(data => { 
                         select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>'; 
                         (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; }); 
