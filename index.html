@@ -37,7 +37,6 @@
             font-family: 'Inter', sans-serif; 
             background: #0c0d10; color: var(--text-main); min-height: 100vh; 
             display: flex; justify-content: center; align-items: center; overflow-x: hidden; position: relative;
-            overscroll-behavior-y: none;
         }
 
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; opacity: 0.35; display: block; }
@@ -65,7 +64,7 @@
         .btn-submit.btn-danger { background: var(--danger-color); }
         .status-message { margin-top: 15px; text-align: center; font-size: 14px; font-weight: 600; display: none; }
 
-        .mobile-presencial-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(12,13,16,0.95); z-index: 9999; display: none; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; overscroll-behavior-y: none; }
+        .mobile-presencial-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(12,13,16,0.95); z-index: 9999; display: none; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; }
         .mobile-presencial-card { background: var(--container-bg); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 24px; padding: 35px 25px; width: 100%; max-width: 400px; position: relative; }
         .link-discreto { color: var(--text-muted); font-size: 13px; text-align: center; display: block; margin-top: 20px; text-decoration: underline; cursor: pointer; }
 
@@ -775,11 +774,20 @@
 
         function abrirTelaPresencialMobile() {
             document.getElementById('mobile-presencial-overlay').style.display = 'flex';
+            
+            // CORREÇÃO: Mesma trava de "options.length" que você fez sabiamente no Atendimento.
+            // Impede requisições múltiplas ao listar_monitores!
+            let select = document.getElementById('presencial-monitor');
+            if (select && select.options.length > 1) {
+                return;
+            }
+
             apiFetch({ action: 'listar_monitores' }).then(data => {
-                let select = document.getElementById('presencial-monitor'); select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
+                select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
                 (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; });
             });
         }
+        
         function fecharPresencialEIrParaLogin() { document.getElementById('mobile-presencial-overlay').style.display = 'none'; }
 
         document.getElementById('form-presencial').addEventListener('submit', e => {
