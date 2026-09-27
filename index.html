@@ -877,7 +877,7 @@
             }).finally(() => { btn.disabled = false; btn.textContent = 'Criar Conta'; });
         });
 
-        // AGORA É UMA FUNÇÃO ASSÍNCRONA PARA MOSTRAR O LOADING
+        // AGORA É UMA FUNÇÃO ASSÍNCRONA PARA MOSTRAR O LOADING E PRÉ-CARREGAR AS AULAS
         async function ativarPainel() {
             // Oculta a tela de Auth, MAS ainda não mostra o dashboard
             document.getElementById('auth-section').style.display = 'none';
@@ -906,18 +906,36 @@
             aplicarRestricoesDeBanimento();
             if (session.classe === 'monitor' || session.senha_alterada === 'sim') { document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; } else { document.getElementById('btn-abrir-modal-senha').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-perfil').style.display = 'none'; }
             
-            // Aguarda TODOS os carregamentos vitais finalizarem por baixo dos panos antes de mostrar
+            // Aguarda TODOS os carregamentos vitais finalizarem por baixo dos panos antes de mostrar o painel
             try {
+                // 1. Carrega o básico em paralelo (Módulos, Notificações, Alertas e Concluídas)
                 await Promise.all([
                     carregarModulos(),
                     checarNotificacoes(),
-                    verificarAlertaPlataforma()
+                    verificarAlertaPlataforma(),
+                    apiFetch({ action: 'obter_aulas_concluidas' }).then(res => {
+                        cacheAulasConcluidas = res.aulas_concluidas || [];
+                        aulasConcluidasCarregadas = true;
+                    })
                 ]);
+
+                // 2. Agora faz o pré-carregamento (cache em lote) de TODAS as aulas de todos os módulos
+                if (cacheModulos && cacheModulos.length > 0) {
+                    const promessasAulas = cacheModulos.map(m => 
+                        apiFetch({ action: 'listar_aulas', id_modulo: m.id_modulo }).then(data => {
+                            cacheAulasPorModulo[m.id_modulo] = data.aulas || [];
+                        }).catch(err => console.error("Erro ao carregar aulas do módulo", m.id_modulo))
+                    );
+                    
+                    // Aguarda as aulas de todos os módulos serem transferidas
+                    await Promise.all(promessasAulas);
+                }
+
             } catch (e) {
                 console.error("Erro no carregamento inicial:", e);
             }
 
-            // Agora sim, esconde o modal de Loading e exibe o dashboard completo, sem piscar
+            // Agora sim, esconde o modal de Loading e exibe o dashboard completo, pronto e rápido
             if (loadingModal) loadingModal.style.display = 'none';
             document.getElementById('dashboard-section').style.display = 'flex';
 
