@@ -540,6 +540,17 @@
             return txt; 
         }
 
+        // Função segura para escapar HTML antes de inserções no DOM
+        function escaparHtml(texto) { 
+            if (!texto) return '';
+            return String(texto)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
+
         let cacheAulasConcluidas = [];
         let cacheModulos = []; 
         let dragSrcEl = null;
@@ -591,10 +602,17 @@
         function fecharModalConfirmacao() { confirmCallback = null; document.getElementById('modal-confirmacao').style.display = 'none'; }
         function confirmarAcaoModal() { if (confirmCallback) { let cb = confirmCallback; confirmCallback = null; cb(); } document.getElementById('modal-confirmacao').style.display = 'none'; }
         
+        // Função de envio à API agora injeta o token automaticamente nas rotas que exigem
         function apiFetch(dataObj) { 
             let fd = new URLSearchParams(); 
+            if (session && session.token) fd.append('token', session.token);
             for (let key in dataObj) { if (dataObj[key] !== undefined && dataObj[key] !== null) fd.append(key, dataObj[key]); } 
-            return fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: fd }).then(res => res.json()); 
+            return fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: fd }).then(res => res.json()).then(data => {
+                if (data.logout_necessario) {
+                    session = null; localStorage.removeItem('monitoria_session'); location.reload();
+                }
+                return data;
+            }); 
         }
 
         function abrirModalCompartilhar() {
@@ -610,14 +628,14 @@
 
         let cacheNotificacoes = [];
         function checarNotificacoes() {
-            if (!session || !session.matricula) return;
-            apiFetch({ action: 'verificar_notificacoes', matricula: session.matricula }).then(data => {
+            if (!session || !session.token) return;
+            apiFetch({ action: 'verificar_notificacoes' }).then(data => {
                 if (data.status === 'sucesso' && data.notificacoes) {
                     cacheNotificacoes = data.notificacoes;
                     let listContent = document.getElementById('notification-list-content'); let dot = document.getElementById('dot-notificacao');
                     if (data.notificacoes.length > 0) {
                         dot.style.display = 'block'; listContent.innerHTML = '';
-                        data.notificacoes.forEach((n, idx) => { listContent.innerHTML += `<div class="notification-item" style="cursor:pointer;" onclick="abrirNotificacao(${idx})">${n.texto}<span>${n.data}</span></div>`; });
+                        data.notificacoes.forEach((n, idx) => { listContent.innerHTML += `<div class="notification-item" style="cursor:pointer;" onclick="abrirNotificacao(${idx})">${escaparHtml(n.texto)}<span>${escaparHtml(n.data)}</span></div>`; });
                     } else { dot.style.display = 'none'; listContent.innerHTML = '<div class="notification-empty">Nenhuma notificação nova.</div>'; }
                 }
             }).catch(() => {});
@@ -625,7 +643,7 @@
 
         function abrirNotificacao(idx) {
             let n = cacheNotificacoes[idx]; if (!n) return;
-            apiFetch({ action: 'marcar_notificacao_lida', matricula: session.matricula, texto: n.texto, data: n.data }).then(() => checarNotificacoes());
+            apiFetch({ action: 'marcar_notificacao_lida', texto: n.texto, data: n.data }).then(() => checarNotificacoes());
             document.getElementById('notification-dropdown').style.display = 'none';
             if (n.tipo === 'atendimento') { navAtendimento.click(); return; }
             if (n.tipo === 'forum' && n.ref_modulo) {
@@ -638,12 +656,12 @@
             }
             if (n.tipo === 'aula' && n.ref_modulo && n.ref_aula) {
                 alternarAbaNavegacao(navConteudo, secConteudo);
-                apiFetch({ action: 'listar_modulos', classe: session.classe }).then(dataMod => {
+                apiFetch({ action: 'listar_modulos' }).then(dataMod => {
                     let mod = (dataMod.modulos || []).find(m => m.id_modulo === n.ref_modulo);
                     if (!mod) { showToast('Módulo não disponível.', true); return; }
                     currentContext.modulo_id = mod.id_modulo; currentContext.modulo_nome = mod.nome; currentContext.modulo_desc = mod.descricao; currentContext.modulo_oculto = mod.oculto;
                     document.getElementById('titulo-modulo-selecionado').textContent = mod.nome; document.getElementById('desc-modulo-selecionado').textContent = mod.descricao;
-                    apiFetch({ action: 'obter_aulas_concluidas', matricula: session.matricula }).then(resConcluidas => {
+                    apiFetch({ action: 'obter_aulas_concluidas' }).then(resConcluidas => {
                         cacheAulasConcluidas = resConcluidas.aulas_concluidas || [];
                         apiFetch({ action: 'listar_aulas', id_modulo: mod.id_modulo }).then(dataAulas => {
                             cacheAulasDoModulo = dataAulas.aulas || []; let aula = cacheAulasDoModulo.find(a => a.aula_id === n.ref_aula);
@@ -713,8 +731,10 @@
             if (savedSession) {
                 try {
                     session = JSON.parse(savedSession);
-                    ativarPainel();
-                    return;
+                    if (session.token) {
+                        ativarPainel();
+                        return;
+                    }
                 } catch(e) {
                     localStorage.removeItem('monitoria_session');
                 }
@@ -727,11 +747,12 @@
             document.getElementById('mobile-presencial-overlay').style.display = 'flex';
             apiFetch({ action: 'listar_monitores' }).then(data => {
                 let select = document.getElementById('presencial-monitor'); select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
-                (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${m.nome}">${m.nome}</option>`; });
+                (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; });
             });
         }
         function fecharPresencialEIrParaLogin() { document.getElementById('mobile-presencial-overlay').style.display = 'none'; }
 
+        // Requisições deslogadas continuam enviando e.parameter (token não é exigido)
         document.getElementById('form-presencial').addEventListener('submit', e => {
             e.preventDefault();
             let btn = document.getElementById('btn-submit-presencial'); btn.disabled = true; btn.textContent = 'Registrando...';
@@ -739,7 +760,7 @@
 
             apiFetch({ 
                 action: 'solicitar_atendimento', matricula: infoPresencialSalva.matricula, nome: infoPresencialSalva.nome, email: "", 
-                curso: document.getElementById('presencial-curso').value, fase_ano: document.getElementById('presencial-fase').value, monitor_nome: document.getElementById('presencial-monitor').value, status: 'PENDENTE'
+                curso: document.getElementById('presencial-curso').value, fase_ano: document.getElementById('presencial-fase').value, monitor_nome: document.getElementById('presencial-monitor').value
             }).then(data => { 
                 showToast(data.mensagem); btn.disabled = false; btn.textContent = 'Confirmar Presença';
                 document.getElementById('step-1-presenca').style.display = 'none'; document.getElementById('step-2-cadastro').style.display = 'block';
@@ -757,7 +778,7 @@
                     showToast("Conta criada! Você já será conectado.");
                     apiFetch({ action: 'login', email: emailAluno, senha: infoPresencialSalva.matricula }).then(dataLogin => {
                         if (dataLogin.status === 'sucesso') {
-                            session = { nome: dataLogin.nome, matricula: dataLogin.matricula, email: dataLogin.email, classe: dataLogin.classe, senha_alterada: dataLogin.senha_alterada || 'nao', foto_perfil: dataLogin.foto_perfil || '', banimento: dataLogin.banimento || null };
+                            session = { token: dataLogin.token, nome: dataLogin.nome, matricula: dataLogin.matricula, email: dataLogin.email, classe: dataLogin.classe, senha_alterada: dataLogin.senha_alterada || 'nao', foto_perfil: dataLogin.foto_perfil || '', banimento: dataLogin.banimento || null };
                             localStorage.setItem('monitoria_session', JSON.stringify(session));
                             document.getElementById('mobile-presencial-overlay').style.display = 'none'; ativarPainel();
                         }
@@ -817,7 +838,8 @@
             let btn = document.getElementById('btn-submit-login'); btn.disabled = true; btn.textContent = 'Verificando...';
             apiFetch({ action: 'login', email: document.getElementById('form-login').email.value, senha: document.getElementById('form-login').senha.value }).then(data => {
                 if (data.status === 'sucesso') {
-                    session = { nome: data.nome, matricula: data.matricula, email: data.email, classe: data.classe, senha_alterada: data.senha_alterada || 'nao', foto_perfil: data.foto_perfil || '', banimento: data.banimento || null };
+                    // Armazena o token na sessão
+                    session = { token: data.token, nome: data.nome, matricula: data.matricula, email: data.email, classe: data.classe, senha_alterada: data.senha_alterada || 'nao', foto_perfil: data.foto_perfil || '', banimento: data.banimento || null };
                     localStorage.setItem('monitoria_session', JSON.stringify(session));
                     ativarPainel();
                 } else { showToast(data.mensagem, true); }
@@ -836,7 +858,7 @@
             document.getElementById('auth-section').style.display = 'none'; document.getElementById('dashboard-section').style.display = 'flex';
             document.getElementById('bg-canvas').style.display = 'none'; 
             
-            let primeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Usuário"; document.getElementById('display-user-name').textContent = `Olá, ${primeiroNome}`;
+            let primeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Usuário"; document.getElementById('display-user-name').textContent = `Olá, ${escaparHtml(primeiroNome)}`;
             let avatarHeader = document.getElementById('display-user-avatar');
             if (session.foto_perfil) { avatarHeader.src = session.foto_perfil; avatarHeader.style.display = 'block'; } else { avatarHeader.style.display = 'none'; }
 
@@ -852,7 +874,7 @@
             carregarModulos(); checarNotificacoes(); verificarAlertaPlataforma(); setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
         }
 
-        function verificarVisibilidadeQuizAluno() { apiFetch({ action: 'obter_quiz_dados', matricula: session.matricula }).then(data => { if (data.status === 'sucesso') navQuiz.style.display = (data.visibilidade === 'sim' && !usuarioEstaImpedidoDe('quiz')) ? 'flex' : 'none'; }).catch(() => {}); }
+        function verificarVisibilidadeQuizAluno() { apiFetch({ action: 'obter_quiz_dados' }).then(data => { if (data.status === 'sucesso') navQuiz.style.display = (data.visibilidade === 'sim' && !usuarioEstaImpedidoDe('quiz')) ? 'flex' : 'none'; }).catch(() => {}); }
         function usuarioEstaImpedidoDe(tipoAcao) { let ban = session.banimento; if (!ban) return false; if (ban.tipo === 'corretivo') return (tipoAcao === 'forum' || tipoAcao === 'comentar' || tipoAcao === 'filmes'); if (ban.tipo === 'privativo') return (tipoAcao === 'forum' || tipoAcao === 'comentar' || tipoAcao === 'quiz'); return false; }
         function aplicarRestricoesDeBanimento() {
             let ban = session.banimento; if (session.classe === 'monitor') return; 
@@ -871,18 +893,18 @@
 
         let quizTodasPerguntasCache = [], quizPerguntasAtivas = [], quizIndiceAtual = 0, quizTimerInterval = null, pontuacaoSessaoQuiz = 0;
         function carregarDadosQuiz() {
-            apiFetch({ action: 'obter_quiz_dados', matricula: session.matricula }).then(data => {
+            apiFetch({ action: 'obter_quiz_dados' }).then(data => {
                 if (data.status === 'sucesso') {
                     if (session.classe === 'monitor') { document.getElementById('quiz-execucao-aluno').style.display = 'none'; document.getElementById('quiz-painel-monitor').style.display = 'block'; renderizarRanking(data.ranking || []); carregarPerguntasQuiz();
                     } else {
                         document.getElementById('quiz-painel-monitor').style.display = 'none';
                         if (data.visibilidade === 'sim') {
                             document.getElementById('quiz-execucao-aluno').style.display = 'block'; window.quizTempoLimiteMin = Number(data.tempo) || 5;
-                            if (data.finalizado) { document.getElementById('quiz-execucao-aluno').innerHTML = `<h3 style="color:var(--danger-color);">Quiz Concluído e Bloqueado</h3><p style="color:var(--text-muted); margin-top:10px;">Você já concluiu sua sessão de quiz. Um e-mail com a revisão dos erros foi enviado para ${session.email}.</p>`;
+                            if (data.finalizado) { document.getElementById('quiz-execucao-aluno').innerHTML = `<h3 style="color:var(--danger-color);">Quiz Concluído e Bloqueado</h3><p style="color:var(--text-muted); margin-top:10px;">Você já concluiu sua sessão de quiz. Um e-mail com a revisão dos erros foi enviado para ${escaparHtml(session.email)}.</p>`;
                             } else {
                                 quizTodasPerguntasCache = data.perguntas || []; let respondidas = data.respondidas || []; let naoRespondidas = quizTodasPerguntasCache.filter(p => respondidas.indexOf(p.id) === -1);
                                 let selectCat = document.getElementById('select-categoria-aluno'); selectCat.innerHTML = ''; let catsDisponiveis = [...new Set(naoRespondidas.map(p => p.categoria))];
-                                if (catsDisponiveis.length === 0) { document.getElementById('quiz-execucao-aluno').innerHTML = `<h3 style="color:var(--success-color);">Todas as Questões Respondidas!</h3><p style="color:var(--text-muted); margin-top:10px;">Você já respondeu a todas as perguntas disponíveis.</p>`; } else { catsDisponiveis.forEach(cat => { selectCat.innerHTML += `<option value="${cat}">${cat}</option>`; }); }
+                                if (catsDisponiveis.length === 0) { document.getElementById('quiz-execucao-aluno').innerHTML = `<h3 style="color:var(--success-color);">Todas as Questões Respondidas!</h3><p style="color:var(--text-muted); margin-top:10px;">Você já respondeu a todas as perguntas disponíveis.</p>`; } else { catsDisponiveis.forEach(cat => { selectCat.innerHTML += `<option value="${escaparHtml(cat)}">${escaparHtml(cat)}</option>`; }); }
                             }
                         } else { document.getElementById('quiz-execucao-aluno').innerHTML = `<h3 style="color:var(--danger-color);">Quiz Indisponível</h3><p style="color:var(--text-muted);">Aguarde a liberação pelo monitor.</p>`; document.getElementById('quiz-execucao-aluno').style.display = 'block'; }
                     }
@@ -893,14 +915,14 @@
         function salvarEIniciarQuiz(status) { let tempo = document.getElementById('quiz-tempo-input').value; apiFetch({ action: 'salvar_quiz_config', visibilidade: status, categorias: '', tempo: tempo }).then(data => { showToast(data.mensagem); carregarDadosQuiz(); }); }
         function abrirModalResponderQuiz() {
             let catEscolhida = document.getElementById('select-categoria-aluno').value; if (!catEscolhida) { showToast("Selecione uma categoria válida.", true); return; }
-            apiFetch({ action: 'obter_quiz_dados', matricula: session.matricula }).then(data => {
+            apiFetch({ action: 'obter_quiz_dados' }).then(data => {
                 let respondidas = data.respondidas || []; quizPerguntasAtivas = quizTodasPerguntasCache.filter(p => p.categoria === catEscolhida && respondidas.indexOf(p.id) === -1);
                 if (quizPerguntasAtivas.length === 0) { showToast("Você já respondeu todas as perguntas desta categoria.", true); carregarDadosQuiz(); return; }
                 quizIndiceAtual = 0; pontuacaoSessaoQuiz = 0; iniciarCronometroQuiz(window.quizTempoLimiteMin * 60); exibirPerguntaModal(); document.getElementById('modal-responder-quiz').style.display = 'flex';
             });
         }
         function tentarFecharModalQuiz() { abrirModalConfirmacao("Se fechar o quiz agora, ele será bloqueado e um relatório dos erros será enviado. Deseja encerrar?", () => { finalizarQuizDefinitivamente(); }); }
-        function finalizarQuizDefinitivamente() { if (quizTimerInterval) clearInterval(quizTimerInterval); apiFetch({ action: 'finalizar_quiz_aluno', matricula: session.matricula, email: session.email, nome: session.nome }).then(() => { document.getElementById('modal-responder-quiz').style.display = 'none'; carregarDadosQuiz(); showToast("Quiz finalizado. Relatório enviado.", true); }).catch(() => { document.getElementById('modal-responder-quiz').style.display = 'none'; carregarDadosQuiz(); }); }
+        function finalizarQuizDefinitivamente() { if (quizTimerInterval) clearInterval(quizTimerInterval); apiFetch({ action: 'finalizar_quiz_aluno' }).then(() => { document.getElementById('modal-responder-quiz').style.display = 'none'; carregarDadosQuiz(); showToast("Quiz finalizado. Relatório enviado.", true); }).catch(() => { document.getElementById('modal-responder-quiz').style.display = 'none'; carregarDadosQuiz(); }); }
         function iniciarCronometroQuiz(segundosTotais) {
             if (quizTimerInterval) clearInterval(quizTimerInterval); let tempoRestante = segundosTotais; let timerDisplay = document.getElementById('quiz-timer-display');
             quizTimerInterval = setInterval(() => { let min = Math.floor(tempoRestante / 60); let sec = tempoRestante % 60; timerDisplay.textContent = `Tempo Restante: ${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`; if (tempoRestante <= 0) { clearInterval(quizTimerInterval); finalizarQuizDefinitivamente(); showToast("O tempo acabou!", true); } tempoRestante--; }, 1000);
@@ -916,21 +938,20 @@
         }
 
         function enviarRespostaBackend(perguntaId, respostaLetra) {
-            apiFetch({ action: 'responder_pergunta_quiz', matricula: session.matricula, pergunta_id: perguntaId, resposta: respostaLetra }).then(data => {
+            apiFetch({ action: 'responder_pergunta_quiz', pergunta_id: perguntaId, resposta: respostaLetra }).then(data => {
                 if (data.status === 'sucesso') {
                     if (data.acertou) pontuacaoSessaoQuiz += 10;
                     let fb = document.getElementById('quiz-feedback-box'); fb.style.display = 'block';
-                    if (data.acertou) { fb.style.backgroundColor = 'rgba(16, 185, 129, 0.15)'; fb.style.border = '1px solid var(--success-color)'; fb.style.color = '#34d399'; fb.innerHTML = `<strong>Resposta Correta! (+10 pts)</strong><br><span style="font-weight:400; font-size:13px; color:var(--text-main); margin-top:6px; display:block;">${data.explicacao}</span>`; } else { fb.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; fb.style.border = '1px solid var(--danger-color)'; fb.style.color = '#f87171'; fb.innerHTML = `<strong>Incorreta. (Gabarito: ${data.gabarito === 'V' ? 'Verdadeiro' : 'Falso'})</strong><br><span style="font-weight:400; font-size:13px; color:var(--text-main); margin-top:6px; display:block;">${data.explicacao}</span>`; }
+                    if (data.acertou) { fb.style.backgroundColor = 'rgba(16, 185, 129, 0.15)'; fb.style.border = '1px solid var(--success-color)'; fb.style.color = '#34d399'; fb.innerHTML = `<strong>Resposta Correta! (+10 pts)</strong><br><span style="font-weight:400; font-size:13px; color:var(--text-main); margin-top:6px; display:block;">${escaparHtml(data.explicacao)}</span>`; } else { fb.style.backgroundColor = 'rgba(239, 68, 68, 0.15)'; fb.style.border = '1px solid var(--danger-color)'; fb.style.color = '#f87171'; fb.innerHTML = `<strong>Incorreta. (Gabarito: ${data.gabarito === 'V' ? 'Verdadeiro' : 'Falso'})</strong><br><span style="font-weight:400; font-size:13px; color:var(--text-main); margin-top:6px; display:block;">${escaparHtml(data.explicacao)}</span>`; }
                     document.getElementById('btn-proxima-questao').style.display = 'block'; document.getElementById('btn-proxima-questao').textContent = "Próxima Questão"; document.getElementById('btn-proxima-questao').onclick = () => { quizIndiceAtual++; exibirPerguntaModal(); };
                 } else { showToast(data.mensagem, true); }
             });
         }
-        function renderizarRanking(rankingList) { let tbody = document.getElementById('ranking-tbody'); tbody.innerHTML = ''; if (rankingList.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Nenhuma pontuação registrada.</td></tr>'; return; } rankingList.forEach((r, index) => { tbody.innerHTML += `<tr><td>${index + 1}º</td><td>${r.matricula}</td><td>${r.nome}</td><td><strong>${r.pontuacao} pts</strong></td></tr>`; }); }
+        function renderizarRanking(rankingList) { let tbody = document.getElementById('ranking-tbody'); tbody.innerHTML = ''; if (rankingList.length === 0) { tbody.innerHTML = '<tr><td colspan="4">Nenhuma pontuação registrada.</td></tr>'; return; } rankingList.forEach((r, index) => { tbody.innerHTML += `<tr><td>${index + 1}º</td><td>${escaparHtml(r.matricula)}</td><td>${escaparHtml(r.nome)}</td><td><strong>${r.pontuacao} pts</strong></td></tr>`; }); }
 
         let cachePerguntasQuiz = [];
-        function escaparHtml(texto) { const d = document.createElement('div'); d.textContent = texto || ''; return d.innerHTML; }
         function carregarPerguntasQuiz() {
-            apiFetch({ action: 'listar_perguntas_quiz', classe: session.classe }).then(data => {
+            apiFetch({ action: 'listar_perguntas_quiz' }).then(data => {
                 cachePerguntasQuiz = data.perguntas || [];
                 const container = document.getElementById('lista-perguntas-quiz-container'); container.innerHTML = '';
                 if (cachePerguntasQuiz.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Nenhuma pergunta cadastrada ainda.</p>'; return; }
@@ -946,17 +967,17 @@
 
         function abrirModalEditarPergunta(id) { let p = cachePerguntasQuiz.find(item => item.id === id); if (!p) return; document.getElementById('perg-id').value = p.id; document.getElementById('perg-categoria').value = p.categoria; document.getElementById('perg-enunciado').value = p.enunciado; document.getElementById('perg-gabarito').value = p.gabarito; document.getElementById('perg-explicacao').value = p.explicacao; document.getElementById('titulo-modal-pergunta').textContent = 'Editar Pergunta'; document.getElementById('modal-pergunta-quiz').style.display = 'flex'; }
 
-        function confirmarExclusaoPergunta(id) { abrirModalConfirmacao('Tem certeza que deseja excluir esta pergunta? Essa ação não pode ser desfeita.', () => { apiFetch({ action: 'deletar_pergunta_quiz', classe: session.classe, id: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarPerguntasQuiz(); }); }); }
+        function confirmarExclusaoPergunta(id) { abrirModalConfirmacao('Tem certeza que deseja excluir esta pergunta? Essa ação não pode ser desfeita.', () => { apiFetch({ action: 'deletar_pergunta_quiz', id: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarPerguntasQuiz(); }); }); }
 
         document.getElementById('form-pergunta-quiz').addEventListener('submit', e => {
             e.preventDefault();
             let id = document.getElementById('perg-id').value;
-            let payload = { action: id ? 'editar_pergunta_quiz' : 'cadastrar_pergunta_quiz', classe: session.classe, id: id, categoria: document.getElementById('perg-categoria').value, enunciado: document.getElementById('perg-enunciado').value, gabarito: document.getElementById('perg-gabarito').value, explicacao: document.getElementById('perg-explicacao').value };
+            let payload = { action: id ? 'editar_pergunta_quiz' : 'cadastrar_pergunta_quiz', id: id, categoria: document.getElementById('perg-categoria').value, enunciado: document.getElementById('perg-enunciado').value, gabarito: document.getElementById('perg-gabarito').value, explicacao: document.getElementById('perg-explicacao').value };
             apiFetch(payload).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-pergunta-quiz').style.display = 'none'; carregarPerguntasQuiz(); } });
         });
 
         function carregarModulos() {
-            apiFetch({ action: 'listar_modulos', classe: session.classe }).then(data => {
+            apiFetch({ action: 'listar_modulos' }).then(data => {
                 cacheModulos = data.modulos || [];
                 renderizarModulos(cacheModulos);
             });
@@ -979,7 +1000,7 @@
                 li.className = 'module-item'; 
                 if (currentContext.modulo_id === mod.id_modulo) li.classList.add('active'); 
                 
-                li.innerHTML = `<span>${mod.nome}</span>`;
+                li.innerHTML = `<span>${escaparHtml(mod.nome)}</span>`;
                 
                 if (ehMonitor && termoBusca === '') {
                     li.draggable = true;
@@ -1055,7 +1076,7 @@
                 }
                 
                 let novaOrdem = Array.from(list.children).map(li => li.dataset.id);
-                apiFetch({ action: 'reordenar_modulos', ordem: JSON.stringify(novaOrdem), classe: session.classe })
+                apiFetch({ action: 'reordenar_modulos', ordem: JSON.stringify(novaOrdem) })
                     .then(res => { if(res.status !== 'sucesso') showToast(res.mensagem, true); });
                 
                 let novoCache = [];
@@ -1077,7 +1098,7 @@
         let cacheAulasDoModulo = [];
         function carregarAulas() {
             document.getElementById('busca-aulas').value = '';
-            apiFetch({ action: 'obter_aulas_concluidas', matricula: session.matricula }).then(resConcluidas => {
+            apiFetch({ action: 'obter_aulas_concluidas' }).then(resConcluidas => {
                 cacheAulasConcluidas = resConcluidas.aulas_concluidas || [];
                 apiFetch({ action: 'listar_aulas', id_modulo: currentContext.modulo_id }).then(data => { cacheAulasDoModulo = data.aulas || []; renderizarAulas(cacheAulasDoModulo); });
             });
@@ -1105,7 +1126,7 @@
                 let editButtonsHTML = (ehMonitor) ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarAula('${escapeParaJS(aula.aula_id)}', '${escapeParaJS(aula.nome_aula)}', '${escapeParaJS(aula.link)}', '${escapeParaJS(aula.descricao)}', '${escapeParaJS(aula.anexo_url)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarAula('${escapeParaJS(aula.aula_id)}')">Excluir</button></div>` : '';
                 let badgeConcluidaHTML = jaConcluida ? `<div class="aula-badge-concluida">✓ Concluída</div>` : ''; let playOrLockIconHTML = liberada ? `<div class="aula-card-play-icon">▶</div>` : `<div class="aula-card-lock-icon">🔒</div>`;
                 if (!liberada) card.classList.add('locked');
-                card.innerHTML = `${badgeConcluidaHTML}<div class="aula-card-thumb" style="${thumbStyle}">${playOrLockIconHTML}</div><div class="aula-card-body"><h4>${aula.nome_aula}</h4><p>${aula.descricao || ''}</p></div>${editButtonsHTML}`;
+                card.innerHTML = `${badgeConcluidaHTML}<div class="aula-card-thumb" style="${thumbStyle}">${playOrLockIconHTML}</div><div class="aula-card-body"><h4>${escaparHtml(aula.nome_aula)}</h4><p>${escaparHtml(aula.descricao || '')}</p></div>${editButtonsHTML}`;
                 card.onclick = () => {
                     if (!liberada) { showToast("Conclua a aula anterior para desbloquear esta!", true); return; }
                     currentContext.aula_id = aula.aula_id; 
@@ -1126,7 +1147,7 @@
                     let btnConcluir = document.getElementById('btn-concluir-aula');
                     if (session.classe === 'monitor') { btnConcluir.style.display = 'none'; } else {
                         btnConcluir.style.display = 'inline-flex'; atualizarEstadoBotaoConcluir(aula.aula_id);
-                        btnConcluir.onclick = () => { btnConcluir.disabled = true; apiFetch({ action: 'marcar_aula_concluida', matricula: session.matricula, aula_id: aula.aula_id }).then(res => { btnConcluir.disabled = false; if (res.status === 'sucesso') { if (!cacheAulasConcluidas.includes(aula.aula_id)) { cacheAulasConcluidas.push(aula.aula_id); } atualizarEstadoBotaoConcluir(aula.aula_id); showToast("Aula registrada como concluída!"); } else { showToast("Erro ao registrar.", true); } }).catch(() => { btnConcluir.disabled = false; showToast("Erro de conexão.", true); }); };
+                        btnConcluir.onclick = () => { btnConcluir.disabled = true; apiFetch({ action: 'marcar_aula_concluida', aula_id: aula.aula_id }).then(res => { btnConcluir.disabled = false; if (res.status === 'sucesso') { if (!cacheAulasConcluidas.includes(aula.aula_id)) { cacheAulasConcluidas.push(aula.aula_id); } atualizarEstadoBotaoConcluir(aula.aula_id); showToast("Aula registrada como concluída!"); } else { showToast("Erro ao registrar.", true); } }).catch(() => { btnConcluir.disabled = false; showToast("Erro de conexão.", true); }); };
                     } carregarComentariosAula();
                 }; grid.appendChild(card);
             });
@@ -1169,7 +1190,7 @@
         function carregarFilmes() {
             document.getElementById('btn-abrir-modal-filme').style.display = (session.classe === 'monitor') ? 'inline-block' : 'none';
             const buscaWrapper = document.getElementById('filmes-busca-wrapper');
-            apiFetch({ action: 'listar_filmes', classe: session.classe, matricula: session.matricula }).then(data => {
+            apiFetch({ action: 'listar_filmes' }).then(data => {
                 const grid = document.getElementById('filmes-grid'); const avisoBox = document.getElementById('filmes-bloqueado-aviso');
                 if (data.bloqueado) { avisoBox.style.display = 'block'; avisoBox.textContent = data.motivo; grid.innerHTML = ''; buscaWrapper.style.display = 'none'; return; }
                 avisoBox.style.display = 'none';
@@ -1187,7 +1208,7 @@
                 let card = document.createElement('div'); card.className = 'aula-card';
                 let hiddenBadge = (f.oculto === 'sim') ? `<div class="aula-badge-concluida" style="background:var(--danger-color);">Oculto</div>` : '';
                 let editHTML = (session.classe === 'monitor') ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarFilme('${escapeParaJS(f.id)}','${escapeParaJS(f.titulo)}','${escapeParaJS(f.drive_id)}','${escapeParaJS(f.capa)}','${escapeParaJS(f.descricao)}','${escapeParaJS(f.oculto)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarFilme('${escapeParaJS(f.id)}')">Excluir</button></div>` : '';
-                card.innerHTML = `${hiddenBadge}<div class="aula-card-thumb" style="background-image:url('${f.capa}');"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${f.titulo}</h4></div>${editHTML}`;
+                card.innerHTML = `${hiddenBadge}<div class="aula-card-thumb" style="background-image:url('${f.capa}');"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${escaparHtml(f.titulo)}</h4></div>${editHTML}`;
                 card.onclick = () => { abrirPlayerFilme(f.drive_id, f.titulo, f.descricao); }; grid.appendChild(card);
             });
         }
@@ -1212,7 +1233,7 @@
             document.getElementById('modal-filme').style.display = 'flex'; 
         }
         
-        function deletarFilme(id) { abrirModalConfirmacao("Excluir filme?", () => { apiFetch({ action: 'deletar_filme', id_filme: id, classe: session.classe }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarFilmes(); }); }); }
+        function deletarFilme(id) { abrirModalConfirmacao("Excluir filme?", () => { apiFetch({ action: 'deletar_filme', id_filme: id }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); carregarFilmes(); }); }); }
         
         document.getElementById('form-add-filme').addEventListener('submit', e => { 
             e.preventDefault(); 
@@ -1224,8 +1245,7 @@
                 drive_id: document.getElementById('filme-drive-id').value, 
                 capa_url: document.getElementById('filme-capa-url').value, 
                 descricao: document.getElementById('filme-desc').value,
-                oculto: document.getElementById('filme-oculto').value,
-                classe: session.classe 
+                oculto: document.getElementById('filme-oculto').value
             }).then(data => { 
                 showToast(data.mensagem, data.status !== 'sucesso'); 
                 if (data.status === 'sucesso') { document.getElementById('modal-filme').style.display = 'none'; carregarFilmes(); } 
@@ -1238,15 +1258,15 @@
                 if (cacheComentariosAula.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma dúvida cadastrada.</p>'; return; } 
                 cacheComentariosAula.forEach((c, idx) => { 
                     let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioAula(${idx})">Excluir</button>` : ''; 
-                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${c.matricula})</span>` : '';
-                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${c.nome.charAt(0).toUpperCase()}</div>`;
+                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(c.matricula)})</span>` : '';
+                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${escaparHtml(c.nome).charAt(0).toUpperCase()}</div>`;
                     let textoProc = processarTextoComLinks(c.comentario);
-                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
+                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${escaparHtml(c.nome)}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
                 }); 
             }); 
         }
 
-        document.getElementById('form-comentario-aula').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', nome: session.nome, matricula: session.matricula, comentario: document.getElementById('texto-comentario-aula').value, modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-aula').value = ''; carregarComentariosAula(); }); });
+        document.getElementById('form-comentario-aula').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', comentario: document.getElementById('texto-comentario-aula').value, modulo: currentContext.modulo_id, aula: currentContext.aula_id }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-aula').value = ''; carregarComentariosAula(); }); });
         function deletarComentarioAula(idx) { let c = cacheComentariosAula[idx]; abrirModalConfirmacao("Excluir comentário?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.modulo_id, aula: currentContext.aula_id, comentario: c.comentario }).then(() => carregarComentariosAula()); }); }
 
         function carregarTopicosForum() { 
@@ -1263,7 +1283,7 @@
             listaFiltrada.sort((a, b) => (b.fixado === 'sim' ? 1 : 0) - (a.fixado === 'sim' ? 1 : 0));
             
             container.innerHTML = ''; 
-            if (listaFiltrada.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:30px;">${termo ? 'Nenhum tópico encontrado para "' + termo + '".' : 'Nenhum tópico.'}</p>`; return; } 
+            if (listaFiltrada.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:30px;">${termo ? 'Nenhum tópico encontrado para "' + escaparHtml(termo) + '".' : 'Nenhum tópico.'}</p>`; return; } 
             
             listaFiltrada.forEach((t) => { 
                 let idx = cacheTopicosForum.indexOf(t); 
@@ -1273,22 +1293,22 @@
                 let deleteBtn = (ehMonitor || ehAutor) ? `<button class="btn-text-action danger" onclick="event.stopPropagation(); deletarTopicoForum(${idx})">Excluir</button>` : ''; 
                 let fixBtn = ehMonitor ? `<button class="btn-text-action" onclick="event.stopPropagation(); alternarFixarTopico(${idx})">${t.fixado === 'sim' ? 'Desfixar' : 'Fixar'}</button>` : '';
                 
-                let matriculaDisplay = ehMonitor ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${t.autor_matricula})</span>` : '';
-                let avatarHTML = t.autor_foto ? `<img src="${t.autor_foto}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:6px;">` : `<div style="width:24px; height:24px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:6px; font-size: 11px;">${t.autor_nome.charAt(0).toUpperCase()}</div>`;
+                let matriculaDisplay = ehMonitor ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(t.autor_matricula)})</span>` : '';
+                let avatarHTML = t.autor_foto ? `<img src="${t.autor_foto}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:6px;">` : `<div style="width:24px; height:24px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:6px; font-size: 11px;">${escaparHtml(t.autor_nome).charAt(0).toUpperCase()}</div>`;
                 
                 let badgeFixado = t.fixado === 'sim' ? '<span style="background: var(--primary-color); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; margin-right: 8px; vertical-align: middle;">📌 FIXADO</span>' : '';
                 let bordaDestaque = t.fixado === 'sim' ? 'border-color: var(--primary-color);' : '';
                 
                 let textoProc = processarTextoComLinks(t.texto);
                 
-                container.innerHTML += `<div class="forum-topico-card" style="${bordaDestaque}"><div class="forum-topico-header"><div class="forum-topico-title" onclick='abrirTopicoForum(${idx})'>${badgeFixado}${t.nome_forum}</div><div>${fixBtn}${deleteBtn}</div></div><div class="forum-topico-meta" style="display:flex; align-items:center;">${avatarHTML} Por: ${t.autor_nome}${matriculaDisplay} • ${t.data_criacao}</div><p class="forum-topico-texto">${textoProc}</p></div>`; 
+                container.innerHTML += `<div class="forum-topico-card" style="${bordaDestaque}"><div class="forum-topico-header"><div class="forum-topico-title" onclick='abrirTopicoForum(${idx})'>${badgeFixado}${escaparHtml(t.nome_forum)}</div><div>${fixBtn}${deleteBtn}</div></div><div class="forum-topico-meta" style="display:flex; align-items:center;">${avatarHTML} Por: ${escaparHtml(t.autor_nome)}${matriculaDisplay} • ${escaparHtml(t.data_criacao)}</div><p class="forum-topico-texto">${textoProc}</p></div>`; 
             }); 
         }
         document.getElementById('busca-forum').addEventListener('input', renderizarTopicosForum);
         
         function alternarFixarTopico(idx) {
             let t = cacheTopicosForum[idx];
-            apiFetch({ action: 'fixar_topico_forum', id_forum: t.id_forum, classe: session.classe }).then(data => {
+            apiFetch({ action: 'fixar_topico_forum', id_forum: t.id_forum }).then(data => {
                 showToast(data.mensagem, data.status !== 'sucesso');
                 if (data.status === 'sucesso') carregarTopicosForum();
             });
@@ -1301,16 +1321,16 @@
             document.getElementById('view-forum-topico').style.display = 'block'; 
             document.getElementById('detalhe-topico-titulo').textContent = topico.nome_forum; 
             
-            let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${topico.autor_matricula})</span>` : '';
-            let avatarHTML = topico.autor_foto ? `<img src="${topico.autor_foto}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:8px;">` : `<div style="width:28px; height:28px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:8px; font-size: 12px;">${topico.autor_nome.charAt(0).toUpperCase()}</div>`;
+            let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(topico.autor_matricula)})</span>` : '';
+            let avatarHTML = topico.autor_foto ? `<img src="${topico.autor_foto}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:8px;">` : `<div style="width:28px; height:28px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:8px; font-size: 12px;">${escaparHtml(topico.autor_nome).charAt(0).toUpperCase()}</div>`;
             
-            document.getElementById('detalhe-topico-meta').innerHTML = `${avatarHTML} Por: ${topico.autor_nome}${matriculaDisplay} • ${topico.data_criacao}`; 
+            document.getElementById('detalhe-topico-meta').innerHTML = `${avatarHTML} Por: ${escaparHtml(topico.autor_nome)}${matriculaDisplay} • ${escaparHtml(topico.data_criacao)}`; 
             document.getElementById('detalhe-topico-texto').innerHTML = processarTextoComLinks(topico.texto); 
             carregarComentariosForum(); 
         }
 
         document.getElementById('btn-voltar-forum').addEventListener('click', () => { document.getElementById('view-forum-topico').style.display = 'none'; document.getElementById('view-forum-lista').style.display = 'block'; });
-        document.getElementById('form-add-topico').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'cadastrar_topico_forum', nome_forum: document.getElementById('topico-titulo').value, texto: document.getElementById('topico-texto').value, nome: session.nome, matricula: session.matricula }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-topico-forum').style.display = 'none'; carregarTopicosForum(); } }); });
+        document.getElementById('form-add-topico').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'cadastrar_topico_forum', nome_forum: document.getElementById('topico-titulo').value, texto: document.getElementById('topico-texto').value }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('modal-topico-forum').style.display = 'none'; carregarTopicosForum(); } }); });
         function deletarTopicoForum(idx) { let t = cacheTopicosForum[idx]; abrirModalConfirmacao("Excluir tópico?", () => { apiFetch({ action: 'deletar_topico_forum', id_forum: t.id_forum }).then(() => { document.getElementById('view-forum-topico').style.display = 'none'; document.getElementById('view-forum-lista').style.display = 'block'; carregarTopicosForum(); }); }); }
 
         function carregarComentariosForum() { 
@@ -1319,15 +1339,15 @@
                 if (cacheComentariosForum.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma resposta.</p>'; return; } 
                 cacheComentariosForum.forEach((c, idx) => { 
                     let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioForum(${idx})">Excluir</button>` : ''; 
-                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${c.matricula})</span>` : '';
-                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${c.nome.charAt(0).toUpperCase()}</div>`;
+                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(c.matricula)})</span>` : '';
+                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${escaparHtml(c.nome).charAt(0).toUpperCase()}</div>`;
                     let textoProc = processarTextoComLinks(c.comentario);
-                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${c.nome}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
+                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${escaparHtml(c.nome)}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
                 }); 
             }); 
         }
 
-        document.getElementById('form-comentario-forum').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', nome: session.nome, matricula: session.matricula, comentario: document.getElementById('texto-comentario-forum').value, modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-forum').value = ''; carregarComentariosForum(); }); });
+        document.getElementById('form-comentario-forum').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', comentario: document.getElementById('texto-comentario-forum').value, modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { if (data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-forum').value = ''; carregarComentariosForum(); }); });
         function deletarComentarioForum(idx) { let c = cacheComentariosForum[idx]; abrirModalConfirmacao("Excluir resposta?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.forum_topico_id, aula: 'forum', comentario: c.comentario }).then(() => carregarComentariosForum()); }); }
 
         function carregarEExibirMonitores() {
@@ -1338,8 +1358,8 @@
                 container.innerHTML = ''; 
                 cacheMonitores.forEach(m => { 
                     const h = m.horarios || { sala: '-', segunda: '-', terca: '-', quarta: '-', quinta: '-', sexta: '-' }; 
-                    const btnEditHTML = (session.classe === 'monitor') ? `<button class="btn-text-action" onclick="abrirModalEditarHorario('${m.email}', '${h.sala}', '${h.segunda}', '${h.terca}', '${h.quarta}', '${h.quinta}', '${h.sexta}')">Editar Horário</button>` : ''; 
-                    container.innerHTML += `<div class="monitor-card"><div class="monitor-card-header"><div><div class="monitor-nome">${m.nome}</div><div style="color:var(--text-muted); font-size:14px; margin-top:4px;">${m.email}</div></div>${btnEditHTML}</div><div style="margin-bottom:12px;"><strong>Sala:</strong> ${h.sala}</div><div class="schedule-table-wrapper"><table class="schedule-table"><thead><tr><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th></tr></thead><tbody><tr><td>${formatarHorario(h.segunda)}</td><td>${formatarHorario(h.terca)}</td><td>${formatarHorario(h.quarta)}</td><td>${formatarHorario(h.quinta)}</td><td>${formatarHorario(h.sexta)}</td></tr></tbody></table></div></div>`; 
+                    const btnEditHTML = (session.classe === 'monitor') ? `<button class="btn-text-action" onclick="abrirModalEditarHorario('${escapeParaJS(m.email)}', '${escapeParaJS(h.sala)}', '${escapeParaJS(h.segunda)}', '${escapeParaJS(h.terca)}', '${escapeParaJS(h.quarta)}', '${escapeParaJS(h.quinta)}', '${escapeParaJS(h.sexta)}')">Editar Horário</button>` : ''; 
+                    container.innerHTML += `<div class="monitor-card"><div class="monitor-card-header"><div><div class="monitor-nome">${escaparHtml(m.nome)}</div><div style="color:var(--text-muted); font-size:14px; margin-top:4px;">${escaparHtml(m.email)}</div></div>${btnEditHTML}</div><div style="margin-bottom:12px;"><strong>Sala:</strong> ${escaparHtml(h.sala)}</div><div class="schedule-table-wrapper"><table class="schedule-table"><thead><tr><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th></tr></thead><tbody><tr><td>${formatarHorario(escaparHtml(h.segunda))}</td><td>${formatarHorario(escaparHtml(h.terca))}</td><td>${formatarHorario(escaparHtml(h.quarta))}</td><td>${formatarHorario(escaparHtml(h.quinta))}</td><td>${formatarHorario(escaparHtml(h.sexta))}</td></tr></tbody></table></div></div>`; 
                 }); 
             });
         }
@@ -1351,18 +1371,19 @@
             } else { 
                 document.getElementById('view-atendimento-aluno').style.display = 'block'; document.getElementById('view-atendimento-monitor').style.display = 'none'; 
                 let select = document.getElementById('atendimento-monitor');
-                apiFetch({ action: 'listar_monitores' }).then(data => { select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>'; (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${m.nome}">${m.nome}</option>`; }); });
+                apiFetch({ action: 'listar_monitores' }).then(data => { select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>'; (data.monitores || []).forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; }); });
             } 
         }
         function carregarSolicitacoesPendentesMonitor() { 
             apiFetch({ action: 'listar_solicitacoes_pendentes' }).then(data => { 
                 const container = document.getElementById('solicitacoes-pendentes-container'); container.innerHTML = ''; 
                 if (data.status === 'erro') { showToast(data.mensagem, true); return; }
-                if (data.solicitacoes && data.solicitacoes.length > 0) { data.solicitacoes.reverse().forEach(sol => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${sol.nome} (${sol.matricula})</h3><p>Curso: ${sol.curso} - Fase: ${sol.fase}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="processarSolicitacao('${sol.id}', 'APROVAR')">Aprovar</button><button class="btn-negar" onclick="processarSolicitacao('${sol.id}', 'NEGAR')">Negar</button></div></div>`; }); 
+                if (data.solicitacoes && data.solicitacoes.length > 0) { data.solicitacoes.reverse().forEach(sol => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${escaparHtml(sol.nome)} (${escaparHtml(sol.matricula)})</h3><p>Curso: ${escaparHtml(sol.curso)} - Fase: ${escaparHtml(sol.fase)}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="processarSolicitacao('${sol.id}', 'APROVAR')">Aprovar</button><button class="btn-negar" onclick="processarSolicitacao('${sol.id}', 'NEGAR')">Negar</button></div></div>`; }); 
                 } else { container.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Nenhuma solicitação pendente.</p>'; } 
             }); 
         }
         function processarSolicitacao(id, decisao) { apiFetch({ action: 'processar_solicitacao_atendimento', id_solicitacao: id, decisao: decisao }).then(data => { showToast(data.mensagem); carregarSolicitacoesPendentesMonitor(); }); }
+        
         document.getElementById('form-registro-atendimento').addEventListener('submit', e => { 
             e.preventDefault(); let btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; btn.textContent = 'Solicitando...'; 
             apiFetch({ action: 'solicitar_atendimento', matricula: session.matricula, nome: session.nome, email: session.email, curso: document.getElementById('atendimento-curso').value, fase_ano: document.getElementById('atendimento-fase-ano').value, monitor_nome: document.getElementById('atendimento-monitor').value })
@@ -1372,11 +1393,11 @@
         document.getElementById('form-salvar-aviso').addEventListener('submit', e => { e.preventDefault(); let btn = document.getElementById('btn-submit-aviso'); btn.textContent = 'Enviando...'; btn.disabled = true; apiFetch({ action: 'salvar_alerta', aviso: document.getElementById('input-texto-aviso').value }).then(data => { showToast(data.mensagem); document.getElementById('input-texto-aviso').value = ''; btn.textContent = 'Publicar e Enviar por E-mail'; btn.disabled = false; }).catch(() => { showToast('Houve um erro na requisição.', true); btn.textContent = 'Publicar e Enviar por E-mail'; btn.disabled = false; }); });
         document.getElementById('form-convidar-visitante').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'convidar_visitante', nome: document.getElementById('convite-nome').value, email: document.getElementById('convite-email').value }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') document.getElementById('form-convidar-visitante').reset(); }); });
         document.getElementById('form-banir-usuario').addEventListener('submit', e => { e.preventDefault(); let matricula = document.getElementById('ban-matricula').value, tipo = document.getElementById('ban-tipo').value; abrirModalConfirmacao(`Confirma o banimento ${tipo.toUpperCase()} da matrícula ${matricula}?`, () => { apiFetch({ action: 'banir_usuario', matricula: matricula, tipo: tipo, motivo: document.getElementById('ban-motivo').value }).then(data => { showToast(data.mensagem, data.status !== 'sucesso'); if (data.status === 'sucesso') { document.getElementById('form-banir-usuario').reset(); carregarBanidos(); } }); }); });
-        function carregarBanidos() { if (session.classe !== 'monitor') return; apiFetch({ action: 'listar_banidos' }).then(data => { const container = document.getElementById('lista-banidos-container'); if (!container) return; container.innerHTML = ''; if (!data.banidos || data.banidos.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Nenhum usuário banido.</p>'; return; } data.banidos.forEach(b => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${b.matricula} — ${b.tipo.toUpperCase()}</h3><p>${b.motivo || 'Sem motivo informado.'}${b.tipo === 'corretivo' ? ' • Até ' + b.data_fim : ''}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="desbanirUsuario('${escapeParaJS(b.matricula)}')">Remover Ban</button></div></div>`; }); }); }
+        function carregarBanidos() { if (session.classe !== 'monitor') return; apiFetch({ action: 'listar_banidos' }).then(data => { const container = document.getElementById('lista-banidos-container'); if (!container) return; container.innerHTML = ''; if (!data.banidos || data.banidos.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Nenhum usuário banido.</p>'; return; } data.banidos.forEach(b => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${escaparHtml(b.matricula)} — ${escaparHtml(b.tipo).toUpperCase()}</h3><p>${escaparHtml(b.motivo) || 'Sem motivo informado.'}${b.tipo === 'corretivo' ? ' • Até ' + escaparHtml(b.data_fim) : ''}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="desbanirUsuario('${escapeParaJS(b.matricula)}')">Remover Ban</button></div></div>`; }); }); }
         function desbanirUsuario(matricula) { abrirModalConfirmacao("Remover o banimento deste usuário?", () => { apiFetch({ action: 'desbanir_usuario', matricula: matricula }).then(data => { showToast(data.mensagem); carregarBanidos(); }); }); }
         
-        document.getElementById('form-alt-senha').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'alterar_senha', matricula: session.matricula, nova_senha: document.getElementById('pass-nova').value }).then(data => { showToast(data.mensagem); session.senha_alterada = 'sim'; document.getElementById('modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; localStorage.setItem('monitoria_session', JSON.stringify(session)); }); });
-        document.getElementById('form-atualizar-perfil').addEventListener('submit', e => { e.preventDefault(); let novaFoto = document.getElementById('perfil-foto-url').value; apiFetch({ action: 'atualizar_perfil', matricula: session.matricula, foto_perfil: novaFoto }).then(data => { showToast(data.mensagem); session.foto_perfil = novaFoto; localStorage.setItem('monitoria_session', JSON.stringify(session)); document.getElementById('modal-perfil').style.display = 'none'; let avatarHeader = document.getElementById('display-user-avatar'); if (novaFoto) { avatarHeader.src = novaFoto; avatarHeader.style.display = 'block'; } }); });
+        document.getElementById('form-alt-senha').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'alterar_senha', nova_senha: document.getElementById('pass-nova').value }).then(data => { showToast(data.mensagem); session.senha_alterada = 'sim'; document.getElementById('modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; localStorage.setItem('monitoria_session', JSON.stringify(session)); }); });
+        document.getElementById('form-atualizar-perfil').addEventListener('submit', e => { e.preventDefault(); let novaFoto = document.getElementById('perfil-foto-url').value; apiFetch({ action: 'atualizar_perfil', foto_perfil: novaFoto }).then(data => { showToast(data.mensagem); session.foto_perfil = novaFoto; localStorage.setItem('monitoria_session', JSON.stringify(session)); document.getElementById('modal-perfil').style.display = 'none'; let avatarHeader = document.getElementById('display-user-avatar'); if (novaFoto) { avatarHeader.src = novaFoto; avatarHeader.style.display = 'block'; } }); });
     </script>
 </body>
 </html>
