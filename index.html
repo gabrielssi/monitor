@@ -772,7 +772,11 @@
             if (isViaQR || isMobile) { abrirTelaPresencialMobile(); }
         });
 
-        function abrirTelaPresencialMobile() {
+function abrirTelaPresencialMobile() {
+            // ADICIONADO: Desliga a animação e o canvas imediatamente na tela presencial
+            animMatrix = false; 
+            document.getElementById('bg-canvas').style.display = 'none';
+
             document.getElementById('mobile-presencial-overlay').style.display = 'flex';
             apiFetch({ action: 'listar_monitores' }).then(data => {
                 let select = document.getElementById('presencial-monitor'); select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
