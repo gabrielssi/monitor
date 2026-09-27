@@ -37,7 +37,7 @@
             font-family: 'Inter', sans-serif; 
             background: #0c0d10; color: var(--text-main); min-height: 100vh; 
             display: flex; justify-content: center; align-items: center; overflow-x: hidden; position: relative;
-            overscroll-behavior-y: none; /* ADICIONADO: Previne puxar para atualizar na página toda */
+            overscroll-behavior-y: none;
         }
 
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; opacity: 0.35; display: block; }
@@ -65,7 +65,7 @@
         .btn-submit.btn-danger { background: var(--danger-color); }
         .status-message { margin-top: 15px; text-align: center; font-size: 14px; font-weight: 600; display: none; }
 
-        .mobile-presencial-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(12,13,16,0.95); z-index: 9999; display: none; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; overscroll-behavior-y: none; /* ADICIONADO: Previne recarregamento ao rolar o modal */ }
+        .mobile-presencial-overlay { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(12,13,16,0.95); z-index: 9999; display: none; justify-content: center; align-items: center; padding: 20px; overflow-y: auto; overscroll-behavior-y: none; }
         .mobile-presencial-card { background: var(--container-bg); border: 1px solid rgba(236, 72, 153, 0.3); border-radius: 24px; padding: 35px 25px; width: 100%; max-width: 400px; position: relative; }
         .link-discreto { color: var(--text-muted); font-size: 13px; text-align: center; display: block; margin-top: 20px; text-decoration: underline; cursor: pointer; }
 
@@ -638,13 +638,7 @@
             for (let key in dataObj) { if (dataObj[key] !== undefined && dataObj[key] !== null) fd.append(key, dataObj[key]); } 
             return fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: fd }).then(res => res.json()).then(data => {
                 if (data.logout_necessario) {
-                    let usuarioEstavaLogado = !!session; // ADICIONADO: Memoriza se o usuário possuía uma sessão
-                    session = null; localStorage.removeItem('monitoria_session'); 
-                    
-                    // ADICIONADO: Impede o recarregamento infinito na tela pública de registro
-                    if (usuarioEstavaLogado) {
-                        location.reload();
-                    }
+                    session = null; localStorage.removeItem('monitoria_session'); location.reload();
                 }
                 return data;
             }); 
@@ -779,11 +773,7 @@
             if (isViaQR || isMobile) { abrirTelaPresencialMobile(); }
         });
 
-function abrirTelaPresencialMobile() {
-            // ADICIONADO: Desliga a animação e o canvas imediatamente na tela presencial
-            animMatrix = false; 
-            document.getElementById('bg-canvas').style.display = 'none';
-
+        function abrirTelaPresencialMobile() {
             document.getElementById('mobile-presencial-overlay').style.display = 'flex';
             apiFetch({ action: 'listar_monitores' }).then(data => {
                 let select = document.getElementById('presencial-monitor'); select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>';
@@ -892,11 +882,10 @@ function abrirTelaPresencialMobile() {
             }).finally(() => { btn.disabled = false; btn.textContent = 'Criar Conta'; });
         });
 
-        // O SISTEMA CARREGA TUDO AGORA EM SEGUNDO PLANO ENQUANTO O MODAL GIRA E DESLIGA A ANIMAÇÃO QUE TRAVAVA O MOBILE
         async function ativarPainel() {
             document.getElementById('auth-section').style.display = 'none';
             document.getElementById('bg-canvas').style.display = 'none'; 
-            animMatrix = false; // DESLIGA A ANIMAÇÃO DO CANVAS para evitar lag e que o teclado mobile feche
+            animMatrix = false;
             
             let primeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Estudante"; 
             
@@ -921,7 +910,6 @@ function abrirTelaPresencialMobile() {
             if (session.classe === 'monitor' || session.senha_alterada === 'sim') { document.getElementById('btn-abrir-modal-senha').style.display = 'none'; document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; } else { document.getElementById('btn-abrir-modal-senha').style.display = 'inline-block'; document.getElementById('btn-abrir-modal-perfil').style.display = 'none'; }
             
             try {
-                // 1. Array global de promessas preenchendo o cache
                 let promessasGerais = [
                     carregarModulos(),
                     checarNotificacoes(),
@@ -953,7 +941,6 @@ function abrirTelaPresencialMobile() {
 
                 await Promise.all(promessasGerais);
 
-                // 2. Pre-load do banco de aulas
                 if (cacheModulos && cacheModulos.length > 0) {
                     const promessasAulas = cacheModulos.map(m => 
                         apiFetch({ action: 'listar_aulas', id_modulo: m.id_modulo }).then(data => {
@@ -1292,7 +1279,7 @@ function abrirTelaPresencialMobile() {
             e.preventDefault(); 
             let aulaId = document.getElementById('aula-id').value; 
             apiFetch({ 
-                action: aulaId ? 'editar_aula', 
+                action: aulaId ? 'editar_aula' : 'cadastrar_aula', 
                 aula_id: aulaId, 
                 id_modulo: currentContext.modulo_id, 
                 nome_aula: document.getElementById('aula-nome').value || 'Aula', 
