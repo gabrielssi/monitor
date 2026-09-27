@@ -71,7 +71,7 @@
 
         .dashboard-wrapper { display: none; width: 100%; min-height: 100vh; flex-direction: column; position: relative; z-index: 1; }
         .topbar { width: 100%; height: 70px; background-color: #14161d; border-bottom: 1px solid var(--input-border); display: flex; justify-content: space-between; align-items: center; padding: 0 35px; position: fixed; top: 0; z-index: 100; }
-        .topbar-brand { font-size: 22px; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; display: flex; align-items: center; gap: 8px; }
+        .topbar-brand { font-size: 22px; font-weight: 800; background: var(--primary-gradient); -webkit-background-clip: text; -webkit-text-fill-color: transparent; letter-spacing: -0.5px; display: flex; align-items: gap: 8px; }
         
         .nav-menu { display: flex; gap: 28px; align-items: center; height: 100%; }
         .nav-link { position: relative; display: flex; align-items: center; padding: 10px 0; border: none; background: transparent; color: var(--text-muted); font-weight: 600; font-size: 14px; cursor: pointer; height: 100%; }
@@ -517,6 +517,26 @@
             </form>
         </div>
     </div>
+
+    <!-- MODAL DE ESQUECI A SENHA -->
+    <div class="modal-overlay" id="modal-esqueci-senha">
+        <div class="modal-content" style="max-width: 420px;">
+            <span class="close-modal" onclick="document.getElementById('modal-esqueci-senha').style.display='none'">&times;</span>
+            <div class="header" style="margin-bottom: 20px;">
+                <h1 style="font-size: 24px;">Recuperar Senha</h1>
+                <p style="color: var(--text-muted); font-size: 14px; margin-top: 8px; line-height: 1.5;">
+                    Enviaremos uma senha temporária para o seu e-mail institucional.
+                </p>
+            </div>
+            <form id="form-esqueci-senha">
+                <div class="form-group">
+                    <label>E-mail Institucional</label>
+                    <input type="email" id="esqueci-email" required pattern="[^\s@]+@(aluno\.)?ifsc\.edu\.br" title="Use seu e-mail institucional (@aluno.ifsc.edu.br ou @ifsc.edu.br)" placeholder="aluno@aluno.ifsc.edu.br">
+                </div>
+                <button type="submit" class="btn-submit">Enviar Nova Senha</button>
+            </form>
+        </div>
+    </div>
     
     <div class="modal-overlay" id="modal-perfil"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-perfil').style.display='none'">&times;</span><div class="header"><h1>Foto de Perfil</h1></div><form id="form-atualizar-perfil"><div class="form-group"><label>URL da Foto</label><input type="url" id="perfil-foto-url" required></div><button type="submit" class="btn-submit">Salvar Perfil</button></form></div></div>
     <div class="modal-overlay" id="modal-modulo"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-modulo').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-modulo">Módulo</h1></div><form id="form-add-modulo"><input type="hidden" id="mod-id"><div class="form-group"><label>Nome</label><input type="text" id="mod-nome" required></div><div class="form-group"><label>Descrição</label><input type="text" id="mod-desc"></div><div class="form-group"><label>Ocultar para Alunos?</label><select id="mod-oculto"><option value="não">Não</option><option value="sim">Sim</option></select></div><button type="submit" class="btn-submit">Salvar Módulo</button></form></div></div>
@@ -914,19 +934,29 @@
             }).finally(() => { btn.disabled = false; btn.textContent = 'Entrar'; });
         });
 
-        // NOVO LISTENER: ESQUECI MINHA SENHA
+        // NOVO LISTENER: ESQUECI MINHA SENHA (COM MODAL)
         document.getElementById('link-esqueci-senha').addEventListener('click', (e) => {
             e.preventDefault();
-            let email = prompt("Digite seu e-mail institucional para recuperar a senha:");
-            if (!email) return;
+            document.getElementById('form-esqueci-senha').reset();
+            document.getElementById('modal-esqueci-senha').style.display = 'flex';
+        });
+
+        document.getElementById('form-esqueci-senha').addEventListener('submit', (e) => {
+            e.preventDefault();
+            let email = document.getElementById('esqueci-email').value;
+            let btn = e.target.querySelector('button');
             
-            if (!/^[^\s@]+@(aluno\.)?ifsc\.edu\.br$/i.test(email)) {
-                showToast("Digite um e-mail institucional válido.", true);
-                return;
-            }
+            btn.disabled = true;
+            btn.textContent = 'Enviando...';
 
             apiFetch({ action: 'recuperar_senha', email: email }).then(data => {
                 if (data) showToast(data.mensagem, data.status !== 'sucesso');
+                if (data && data.status === 'sucesso') {
+                    document.getElementById('modal-esqueci-senha').style.display = 'none';
+                }
+            }).finally(() => {
+                btn.disabled = false;
+                btn.textContent = 'Enviar Nova Senha';
             });
         });
 
