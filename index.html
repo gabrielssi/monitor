@@ -710,11 +710,28 @@
             return apiFetch({ action: 'verificar_notificacoes' }).then(data => {
                 if (data && data.status === 'sucesso' && data.notificacoes) {
                     cacheNotificacoes = data.notificacoes;
-                    let listContent = document.getElementById('notification-list-content'); let dot = document.getElementById('dot-notificacao');
-                    if (data.notificacoes.length > 0) {
-                        dot.style.display = 'block'; listContent.innerHTML = '';
-                        data.notificacoes.forEach((n, idx) => { listContent.innerHTML += `<div class="notification-item" style="cursor:pointer;" onclick="abrirNotificacao(${idx})">${escaparHtml(n.texto)}<span>${escaparHtml(n.data)}</span></div>`; });
-                    } else { dot.style.display = 'none'; listContent.innerHTML = '<div class="notification-empty">Nenhuma notificação nova.</div>'; }
+                    let listContent = document.getElementById('notification-list-content'); 
+                    let dot = document.getElementById('dot-notificacao');
+                    
+                    // Verifica se o usuário ainda usa a senha padrão
+                    let precisaAlterarSenha = (session.senha_alterada === 'nao');
+
+                    if (data.notificacoes.length > 0 || precisaAlterarSenha) {
+                        dot.style.display = 'block'; 
+                        listContent.innerHTML = '';
+                        
+                        // Injeta a notificação de aviso de segurança no topo
+                        if (precisaAlterarSenha) {
+                            listContent.innerHTML += `<div class="notification-item" style="cursor:pointer; border-left: 3px solid var(--danger-color); background-color: rgba(239, 68, 68, 0.1);" onclick="document.getElementById('btn-abrir-modal-senha').click(); document.getElementById('notification-dropdown').style.display='none';">⚠️ Aviso de Segurança<span>Você ainda está usando a senha padrão. Clique aqui para definir uma nova senha.</span></div>`;
+                        }
+
+                        data.notificacoes.forEach((n, idx) => { 
+                            listContent.innerHTML += `<div class="notification-item" style="cursor:pointer;" onclick="abrirNotificacao(${idx})">${escaparHtml(n.texto)}<span>${escaparHtml(n.data)}</span></div>`; 
+                        });
+                    } else { 
+                        dot.style.display = 'none'; 
+                        listContent.innerHTML = '<div class="notification-empty">Nenhuma notificação nova.</div>'; 
+                    }
                 }
             }).catch(() => {});
         }
@@ -1557,6 +1574,9 @@
                     document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; 
                     localStorage.setItem('monitoria_session', JSON.stringify(session)); 
                     document.getElementById('form-alt-senha').reset();
+                    
+                    // Atualiza as notificações imediatamente para sumir o aviso
+                    checarNotificacoes(); 
                 }
                 btn.disabled = false; btn.textContent = "Atualizar Senha";
             }); 
