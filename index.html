@@ -1243,22 +1243,11 @@
             apiFetch(payload).then(data => { if(data) showToast(data.mensagem, data.status !== 'sucesso'); if (data && data.status === 'sucesso') { document.getElementById('modal-pergunta-quiz').style.display = 'none'; carregarPerguntasQuiz(); } });
         });
 
-function carregarModulos() {
-    return apiFetch({ action: 'listar_modulos' }).then(data => {
-        if(data) { 
-            cacheModulos = data.modulos || []; 
-            renderizarModulos(cacheModulos); 
-            
-            // NOVO: Seleciona automaticamente o primeiro módulo ao entrar
-            if (cacheModulos.length > 0 && !currentContext.modulo_id) {
-                const primeiroModulo = document.querySelector('.module-item');
-                if (primeiroModulo) {
-                    primeiroModulo.click();
-                }
-            }
+        function carregarModulos() {
+            return apiFetch({ action: 'listar_modulos' }).then(data => {
+                if(data) { cacheModulos = data.modulos || []; renderizarModulos(cacheModulos); }
+            });
         }
-    });
-}
 
         function renderizarModulos(lista) {
             const list = document.getElementById('module-list'); 
