@@ -1063,9 +1063,17 @@
             setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
         }
 
-        function verificarVisibilidadeQuizAluno() { 
+function verificarVisibilidadeQuizAluno() { 
+            // Garante que o monitor sempre tenha acesso à aba do Quiz
+            if (session && session.classe === 'monitor') {
+                navQuiz.style.display = 'flex';
+                return Promise.resolve();
+            }
+            
             return apiFetch({ action: 'obter_quiz_dados' }).then(data => { 
-                if (data && data.status === 'sucesso') navQuiz.style.display = (data.visibilidade === 'sim' && !usuarioEstaImpedidoDe('quiz')) ? 'flex' : 'none'; 
+                if (data && data.status === 'sucesso') {
+                    navQuiz.style.display = (data.visibilidade === 'sim' && !usuarioEstaImpedidoDe('quiz')) ? 'flex' : 'none'; 
+                }
             }).catch(() => {}); 
         }
         function usuarioEstaImpedidoDe(tipoAcao) { let ban = session.banimento; if (!ban) return false; if (ban.tipo === 'corretivo') return (tipoAcao === 'forum' || tipoAcao === 'comentar' || tipoAcao === 'filmes'); if (ban.tipo === 'privativo') return (tipoAcao === 'forum' || tipoAcao === 'comentar' || tipoAcao === 'quiz'); return false; }
