@@ -37,7 +37,7 @@
             font-family: 'Inter', sans-serif; 
             background: #0c0d10; color: var(--text-main); min-height: 100vh; 
             display: flex; justify-content: center; align-items: center; overflow-x: hidden; position: relative;
-            overscroll-behavior-y: none; /* Previne o drag-to-refresh nativo do navegador */
+            overscroll-behavior-y: none;
         }
 
         #bg-canvas { position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; z-index: 0; pointer-events: none; opacity: 0.35; display: block; }
@@ -98,7 +98,7 @@
         .btn-action-small.btn-danger { border-color: var(--danger-color); color: var(--danger-color); }
         .btn-action-small.btn-danger:hover { background-color: var(--danger-color); color: #ffffff; }
         
-.dashboard-layout { display: flex; width: 100%; margin-top: 70px; height: calc(100vh - 70px); overflow: hidden; }
+        .dashboard-layout { display: flex; width: 100%; margin-top: 70px; height: calc(100vh - 70px); overflow: hidden; }
         .sidebar { width: 320px; background-color: var(--sidebar-bg); border-right: 1px solid var(--input-border); padding: 25px; flex-shrink: 0; display: flex; flex-direction: column; }
         .sidebar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; flex-shrink: 0; }
         .sidebar h3 { font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 1px; }
@@ -191,7 +191,6 @@
         .link-destaque { color: var(--primary-color); text-decoration: none; font-weight: 600; }
         .link-destaque:hover { text-decoration: underline; }
 
-        /* Animação do Spinner Loading */
         .spinner {
             width: 50px; height: 50px;
             border: 4px solid rgba(236, 72, 153, 0.2); border-top: 4px solid var(--primary-color);
@@ -496,6 +495,35 @@
 
     <div class="toast-notification" id="toast-notification">Mensagem</div>
 
+    <!-- MODAL DE BOAS-VINDAS PERSONALIZADO -->
+    <div class="modal-overlay" id="modal-boas-vindas" style="z-index: 10000;">
+        <div class="modal-content" style="max-width: 480px; text-align: center; background: var(--container-card); border-radius: 20px; padding: 40px 30px;">
+            <img id="boas-vindas-monitor-foto" src="" alt="Monitor" style="width: 80px; height: 80px; border-radius: 50%; border: 3px solid var(--primary-color); margin-bottom: 15px; object-fit: cover; display: none;">
+            <div id="boas-vindas-monitor-iniciais" style="width: 80px; height: 80px; border-radius: 50%; background: var(--primary-gradient); color: white; display: flex; align-items: center; justify-content: center; font-size: 32px; font-weight: bold; margin: 0 auto 15px auto;"></div>
+            
+            <h1 style="font-size: 26px; margin-bottom: 8px; color: var(--primary-color);">Olá, <span id="boas-vindas-aluno-nome"></span>!</h1>
+            <h2 style="font-size: 16px; margin-bottom: 20px; color: var(--text-main);">Que bom ter você na Plataforma de Monitoria.</h2>
+            
+            <p style="font-size: 14px; color: var(--text-muted); line-height: 1.6; margin-bottom: 20px;">
+                Eu sou <strong id="boas-vindas-monitor-nome" style="color: var(--text-main);"></strong>, um dos monitores, e estou aqui para te dar as boas-vindas e explicar como aproveitar ao máximo nosso espaço!
+            </p>
+            
+            <div style="background: var(--input-bg); padding: 20px; border-radius: 12px; text-align: left; margin-bottom: 25px; border: 1px solid var(--input-border);">
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+                    <strong style="color: var(--primary-color); font-size: 14px;">💬 Fórum de Dúvidas:</strong> Na aba Fórum, estudantes e o monitor se conectam para trocar ideias e resolver dúvidas.
+                </p>
+                <p style="font-size: 13px; color: var(--text-muted); margin-bottom: 14px; line-height: 1.5;">
+                    <strong style="color: var(--primary-color); font-size: 14px;">📚 Aulas e Plataforma:</strong> Navegue pelos módulos de conteúdos para acessar todas as videoaulas e materiais de apoio.
+                </p>
+                <p style="font-size: 13px; color: var(--text-muted); line-height: 1.5;">
+                    <strong style="color: var(--primary-color); font-size: 14px;">🍿 Cinema no Fim de Semana:</strong> Aos sábados e domingos, liberamos a aba especial de Cinema com ótimos filmes para você curtir e relaxar!
+                </p>
+            </div>
+            
+            <button class="btn-submit" onclick="fecharModalBoasVindas()">Entendido, vamos lá!</button>
+        </div>
+    </div>
+
     <!-- MODAIS DO SISTEMA -->
     <div class="modal-overlay" id="modal-responder-quiz"><div class="modal-content" style="max-width: 550px;"><span class="close-modal" onclick="tentarFecharModalQuiz()">&times;</span><div class="header"><h1 id="quiz-modal-titulo">Quiz</h1><p id="quiz-timer-display" style="color: var(--danger-color); font-weight: 700; font-size: 16px; margin-top: 5px;"></p></div><div id="quiz-modal-corpo" style="margin-bottom: 25px;"><p id="quiz-modal-pergunta" style="font-size: 16px; font-weight: 600; margin-bottom: 20px; line-height: 1.5;"></p><div id="quiz-modal-opcoes" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;"></div><div id="quiz-feedback-box" style="display: none; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; line-height: 1.5;"></div><button class="btn-submit" id="btn-proxima-questao" style="display: none;" onclick="proximaQuestaoQuiz()">Próxima Questão</button></div></div></div>
     <div class="modal-overlay" id="modal-pergunta-quiz"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-pergunta-quiz').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-pergunta">Nova Pergunta</h1></div><form id="form-pergunta-quiz"><input type="hidden" id="perg-id"><div class="form-group"><label>Categoria</label><select id="perg-categoria" required><option value="PYTHON">PYTHON</option><option value="C">C</option><option value="C++">C++</option><option value="LOGICA">LÓGICA</option><option value="OUTROS">OUTROS</option></select></div><div class="form-group"><label>Enunciado</label><textarea id="perg-enunciado" rows="4" required maxlength="1000" placeholder="Digite a afirmação que o aluno vai avaliar como Verdadeira ou Falsa"></textarea></div><div class="form-group"><label>Gabarito</label><select id="perg-gabarito" required><option value="V">Verdadeiro</option><option value="F">Falso</option></select></div><div class="form-group"><label>Explicação (mostrada após a resposta)</label><textarea id="perg-explicacao" rows="3" required maxlength="1000" placeholder="Explique por que a resposta está correta"></textarea></div><button type="submit" class="btn-submit">Salvar Pergunta</button></form></div></div>
@@ -505,7 +533,6 @@
     <div class="modal-overlay" id="modal-editar-horario"><div class="modal-content" style="max-width: 600px;"><span class="close-modal" onclick="document.getElementById('modal-editar-horario').style.display='none'">&times;</span><div class="header"><h1>Editar Horário</h1></div><form id="form-editar-horario"><input type="hidden" id="edit-horario-email"><div class="form-group"><label>Sala</label><input type="text" id="edit-sala" required></div><div class="form-group"><label>Segunda</label><input type="text" id="edit-segunda"></div><div class="form-group"><label>Terça</label><input type="text" id="edit-terca"></div><div class="form-group"><label>Quarta</label><input type="text" id="edit-quarta"></div><div class="form-group"><label>Quinta</label><input type="text" id="edit-quinta"></div><div class="form-group"><label>Sexta</label><input type="text" id="edit-sexta"></div><button type="submit" class="btn-submit">Salvar Horário</button></form></div></div>
     <div class="modal-overlay" id="modal-topico-forum"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-topico-forum').style.display='none'">&times;</span><div class="header"><h1>Novo Tópico</h1></div><form id="form-add-topico"><div class="form-group"><label>Título</label><input type="text" id="topico-titulo" required maxlength="120"></div><div class="form-group"><label>Texto</label><textarea id="topico-texto" rows="5" required maxlength="500"></textarea></div><button type="submit" class="btn-submit">Publicar Tópico</button></form></div></div>
     
-    <!-- MODAL DE SENHA ATUALIZADO -->
     <div class="modal-overlay" id="modal-senha">
         <div class="modal-content">
             <span class="close-modal" onclick="document.getElementById('modal-senha').style.display='none'">&times;</span>
@@ -519,7 +546,6 @@
         </div>
     </div>
 
-    <!-- MODAL DE ESQUECI A SENHA -->
     <div class="modal-overlay" id="modal-esqueci-senha">
         <div class="modal-content" style="max-width: 420px;">
             <span class="close-modal" onclick="document.getElementById('modal-esqueci-senha').style.display='none'">&times;</span>
@@ -599,7 +625,6 @@
             return txt; 
         }
 
-        // Função segura para escapar HTML antes de inserções no DOM
         function escaparHtml(texto) { 
             if (!texto) return '';
             return String(texto)
@@ -670,7 +695,7 @@
         function fecharModalConfirmacao() { confirmCallback = null; document.getElementById('modal-confirmacao').style.display = 'none'; }
         function confirmarAcaoModal() { if (confirmCallback) { let cb = confirmCallback; confirmCallback = null; cb(); } document.getElementById('modal-confirmacao').style.display = 'none'; }
         
-        let isReloading = false; // TRAVA DE SEGURANÇA
+        let isReloading = false;
         function apiFetch(dataObj) { 
             let fd = new URLSearchParams(); 
             if (session && session.token) fd.append('token', session.token);
@@ -679,7 +704,6 @@
             return fetch(scriptURL, { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8' }, body: fd })
             .then(res => res.json())
             .then(data => {
-                // SÓ RELOADA A PÁGINA SE O USUÁRIO TINHA UMA SESSÃO ANTES. 
                 if (data.logout_necessario && session && !isReloading) {
                     isReloading = true;
                     session = null; 
@@ -714,14 +738,12 @@
                     let listContent = document.getElementById('notification-list-content'); 
                     let dot = document.getElementById('dot-notificacao');
                     
-                    // Verifica se o usuário ainda usa a senha padrão
                     let precisaAlterarSenha = (session.senha_alterada === 'nao');
 
                     if (data.notificacoes.length > 0 || precisaAlterarSenha) {
                         dot.style.display = 'block'; 
                         listContent.innerHTML = '';
                         
-                        // Injeta a notificação de aviso de segurança no topo
                         if (precisaAlterarSenha) {
                             listContent.innerHTML += `<div class="notification-item" style="cursor:pointer; border-left: 3px solid var(--danger-color); background-color: rgba(239, 68, 68, 0.1);" onclick="document.getElementById('btn-abrir-modal-senha').click(); document.getElementById('notification-dropdown').style.display='none';">⚠️ Aviso de Segurança<span>Você ainda está usando a senha padrão. Clique aqui para definir uma nova senha.</span></div>`;
                         }
@@ -885,7 +907,7 @@
                     showToast("Conta criada! Você já será conectado.");
                     apiFetch({ action: 'login', email: emailAluno, senha: infoPresencialSalva.matricula }).then(dataLogin => {
                         if (dataLogin && dataLogin.status === 'sucesso') {
-                            session = { token: dataLogin.token, nome: dataLogin.nome, matricula: dataLogin.matricula, email: dataLogin.email, classe: dataLogin.classe, senha_alterada: dataLogin.senha_alterada || 'nao', foto_perfil: dataLogin.foto_perfil || '', banimento: dataLogin.banimento || null };
+                            session = { token: dataLogin.token, nome: dataLogin.nome, matricula: dataLogin.matricula, email: dataLogin.email, classe: dataLogin.classe, senha_alterada: dataLogin.senha_alterada || 'nao', foto_perfil: dataLogin.foto_perfil || '', boas_vindas: dataLogin.boas_vindas || 'nao', banimento: dataLogin.banimento || null };
                             localStorage.setItem('monitoria_session', JSON.stringify(session));
                             document.getElementById('mobile-presencial-overlay').style.display = 'none'; ativarPainel();
                         }
@@ -945,14 +967,13 @@
             let btn = document.getElementById('btn-submit-login'); btn.disabled = true; btn.textContent = 'Verificando...';
             apiFetch({ action: 'login', email: document.getElementById('form-login').email.value, senha: document.getElementById('form-login').senha.value }).then(data => {
                 if (data && data.status === 'sucesso') {
-                    session = { token: data.token, nome: data.nome, matricula: data.matricula, email: data.email, classe: data.classe, senha_alterada: data.senha_alterada || 'nao', foto_perfil: data.foto_perfil || '', banimento: data.banimento || null };
+                    session = { token: data.token, nome: data.nome, matricula: data.matricula, email: data.email, classe: data.classe, senha_alterada: data.senha_alterada || 'nao', foto_perfil: data.foto_perfil || '', boas_vindas: data.boas_vindas || 'nao', banimento: data.banimento || null };
                     localStorage.setItem('monitoria_session', JSON.stringify(session));
                     ativarPainel();
                 } else if(data) { showToast(data.mensagem, true); }
             }).finally(() => { btn.disabled = false; btn.textContent = 'Entrar'; });
         });
 
-        // NOVO LISTENER: ESQUECI MINHA SENHA (COM MODAL)
         document.getElementById('link-esqueci-senha').addEventListener('click', (e) => {
             e.preventDefault();
             document.getElementById('form-esqueci-senha').reset();
@@ -1061,11 +1082,53 @@
             if (loadingModal) loadingModal.style.display = 'none';
             document.getElementById('dashboard-section').style.display = 'flex';
 
+            setTimeout(verificarBoasVindas, 600);
             setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
         }
 
-function verificarVisibilidadeQuizAluno() { 
-            // Garante que o monitor sempre tenha acesso à aba do Quiz
+        function verificarBoasVindas() {
+            if (session && session.classe === 'monitor') return;
+            if (session && session.boas_vindas === 'sim') return;
+            
+            let primeiroMonitor = null;
+            if (cacheMonitores && cacheMonitores.length > 0) {
+                primeiroMonitor = cacheMonitores[0];
+            }
+            
+            let alunoPrimeiroNome = session.nome ? session.nome.trim().split(" ")[0] : "Estudante";
+            let monitorPrimeiroNome = primeiroMonitor ? primeiroMonitor.nome.trim().split(" ")[0] : 'um de nossos monitores';
+            let monitorFoto = primeiroMonitor ? primeiroMonitor.foto : null;
+            
+            document.getElementById('boas-vindas-aluno-nome').textContent = alunoPrimeiroNome;
+            document.getElementById('boas-vindas-monitor-nome').textContent = monitorPrimeiroNome;
+            
+            let imgFoto = document.getElementById('boas-vindas-monitor-foto');
+            let divIniciais = document.getElementById('boas-vindas-monitor-iniciais');
+            
+            if (monitorFoto && monitorFoto.trim() !== '') {
+                imgFoto.src = monitorFoto;
+                imgFoto.style.display = 'block';
+                divIniciais.style.display = 'none';
+            } else {
+                imgFoto.style.display = 'none';
+                divIniciais.style.display = 'flex';
+                divIniciais.textContent = monitorPrimeiroNome.charAt(0).toUpperCase();
+            }
+
+            document.getElementById('modal-boas-vindas').style.display = 'flex';
+        }
+
+        function fecharModalBoasVindas() {
+            document.getElementById('modal-boas-vindas').style.display = 'none';
+            session.boas_vindas = 'sim';
+            localStorage.setItem('monitoria_session', JSON.stringify(session));
+            
+            apiFetch({ action: 'marcar_boas_vindas' }).then(res => {
+                console.log("Boas-vindas salvas permanentemente no servidor.");
+            });
+        }
+
+        function verificarVisibilidadeQuizAluno() { 
             if (session && session.classe === 'monitor') {
                 navQuiz.style.display = 'flex';
                 return Promise.resolve();
@@ -1559,7 +1622,6 @@ function verificarVisibilidadeQuizAluno() {
             }); 
         }
 
-        // NOVO LISTENER: ALTERAR SENHA
         document.getElementById('form-alt-senha').addEventListener('submit', e => { 
             e.preventDefault(); 
             let atual = document.getElementById('pass-atual').value;
@@ -1583,8 +1645,6 @@ function verificarVisibilidadeQuizAluno() {
                     document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; 
                     localStorage.setItem('monitoria_session', JSON.stringify(session)); 
                     document.getElementById('form-alt-senha').reset();
-                    
-                    // Atualiza as notificações imediatamente para sumir o aviso
                     checarNotificacoes(); 
                 }
                 btn.disabled = false; btn.textContent = "Atualizar Senha";
