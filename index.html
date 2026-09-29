@@ -339,12 +339,12 @@
                         <div><h1 id="titulo-modulo-selecionado">Selecione um módulo</h1><p id="desc-modulo-selecionado" style="color:var(--text-muted);">As aulas aparecerão aqui.</p></div>
                         <div><button id="btn-editar-modulo" class="btn-text-action" style="display:none;">Editar</button><button id="btn-deletar-modulo" class="btn-text-action danger" style="display:none;">Excluir</button><button id="btn-abrir-modal-aula" class="btn-admin" style="display: none; margin-left:10px;">+ Nova Aula</button></div>
                     </div>
-                    <div class="form-group" style="max-width:420px;"><input type="text" id="busca-aulas" placeholder="Pesquisar aulas pelo título..."></div>
+                    <div class="form-group" id="container-busca-aulas" style="max-width:420px;"><input type="text" id="busca-aulas" placeholder="Pesquisar aulas pelo título..."></div>
                     <div class="aulas-grid" id="aulas-grid"></div>
                 </div>
 
                 <div id="view-aula" style="display: none;">
-                    <button class="btn-voltar" id="btn-voltar-modulo">← Voltar para o módulo</button>
+                    <button class="btn-voltar" id="btn-voltar-modulo">← Voltar para os módulos</button>
                     <div class="content-header"><h1 id="titulo-aula-selecionada">Título</h1></div>
                     <div class="video-container" id="video-box"><iframe id="iframe-video" src="" title="Player" allowfullscreen></iframe></div>
                     
@@ -1037,6 +1037,7 @@
             try {
                 let promessasGerais = [
                     carregarModulos(),
+                    carregarAulaBoasVindasIniciais(),
                     checarNotificacoes(),
                     verificarAlertaPlataforma(),
                     carregarEExibirMonitores(),
@@ -1084,6 +1085,57 @@
 
             setTimeout(verificarBoasVindas, 600);
             setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
+        }
+
+        function carregarAulaBoasVindasIniciais() {
+            if (currentContext.modulo_id) return Promise.resolve();
+            return apiFetch({ action: 'obter_aula_boasvindas' }).then(data => {
+                if (data && data.status === 'sucesso' && data.aula) {
+                    let aula = data.aula;
+                    document.getElementById('titulo-modulo-selecionado').textContent = aula.nome_aula || 'Boas-Vindas!';
+                    document.getElementById('desc-modulo-selecionado').textContent = 'Assista ao vídeo abaixo para começar.';
+                    
+                    let containerBusca = document.getElementById('container-busca-aulas');
+                    if (containerBusca) containerBusca.style.display = 'none';
+
+                    document.getElementById('btn-editar-modulo').style.display = 'none';
+                    document.getElementById('btn-deletar-modulo').style.display = 'none';
+                    document.getElementById('btn-abrir-modal-aula').style.display = 'none';
+
+                    const grid = document.getElementById('aulas-grid');
+                    grid.innerHTML = '';
+
+                    let card = document.createElement('div');
+                    card.className = 'aula-card';
+                    let ytId = obterIdYoutube(aula.link);
+                    let driveId = !ytId ? extrairIdGoogleDrive(aula.link) : null;
+                    let thumbStyle = ytId ? `background-image: url('https://img.youtube.com/vi/${ytId}/hqdefault.jpg');` : (driveId ? `background-image: url('https://drive.google.com/thumbnail?id=${driveId}&sz=w500');` : '');
+
+                    card.innerHTML = `<div class="aula-card-thumb" style="${thumbStyle}"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${escaparHtml(aula.nome_aula)}</h4><p>${escaparHtml(aula.descricao || '')}</p></div>`;
+
+                    card.onclick = () => {
+                        currentContext.aula_id = aula.aula_id;
+                        document.getElementById('view-modulo').style.display = 'none';
+                        document.getElementById('view-aula').style.display = 'block';
+                        document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula;
+                        document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao);
+                        document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
+
+                        if (aula.anexo_url) {
+                            document.getElementById('box-anexo-aula').style.display = 'block';
+                            document.getElementById('link-anexo-aula').href = aula.anexo_url;
+                        } else {
+                            document.getElementById('box-anexo-aula').style.display = 'none';
+                            document.getElementById('link-anexo-aula').href = '#';
+                        }
+
+                        document.getElementById('btn-concluir-aula').style.display = 'none';
+                        carregarComentariosAula();
+                    };
+
+                    grid.appendChild(card);
+                }
+            }).catch(() => {});
         }
 
         function verificarBoasVindas() {
@@ -1257,7 +1309,7 @@
             let termoBusca = document.getElementById('busca-modulos').value.trim();
 
             if (lista.length === 0) {
-                list.innerHTML = `<p style="color:var(--text-muted); font-size:13px; text-align:center;">Nenhum módulo encontrado.</p>`;
+                list.innerHTML = `<p style="color:var(--text-muted); font-size:13px; text-align:center;">Nenum módulo encontrado.</p>`;
                 return;
             }
 
@@ -1291,7 +1343,10 @@
                     document.getElementById('view-aula').style.display = 'none'; 
                     document.getElementById('titulo-modulo-selecionado').textContent = mod.nome; 
                     document.getElementById('desc-modulo-selecionado').textContent = mod.descricao; 
-                    
+
+                    let containerBusca = document.getElementById('container-busca-aulas');
+                    if (containerBusca) containerBusca.style.display = 'block';
+
                     if (ehMonitor) { 
                         document.getElementById('btn-editar-modulo').style.display = 'inline-block'; 
                         document.getElementById('btn-deletar-modulo').style.display = 'inline-block'; 
@@ -1445,7 +1500,17 @@
         document.getElementById('busca-aulas').addEventListener('input', function() { let termo = this.value.trim().toLowerCase(); let filtradas = termo ? cacheAulasDoModulo.filter(a => (a.nome_aula || '').toLowerCase().includes(termo)) : cacheAulasDoModulo; renderizarAulas(filtradas); });
         function atualizarEstadoBotaoConcluir(aulaId) { let btnConcluir = document.getElementById('btn-concluir-aula'); if (cacheAulasConcluidas.includes(aulaId)) { btnConcluir.className = 'btn-concluir concluida'; btnConcluir.innerHTML = '<span>✓</span> Aula Concluída'; } else { btnConcluir.className = 'btn-concluir'; btnConcluir.innerHTML = '<span>✓</span> Marcar como Concluída'; } }
         function deletarAula(id) { abrirModalConfirmacao("Tem certeza que deseja excluir esta aula?", () => { apiFetch({ action: 'deletar_aula', aula_id: id }).then(data => { if(data) showToast(data.mensagem, data.status !== 'sucesso'); carregarAulas(true); }); }); }
-        document.getElementById('btn-voltar-modulo').addEventListener('click', () => { document.getElementById('iframe-video').src = ''; document.getElementById('view-aula').style.display = 'none'; document.getElementById('view-modulo').style.display = 'block'; carregarAulas(); });
+        
+        document.getElementById('btn-voltar-modulo').addEventListener('click', () => { 
+            document.getElementById('iframe-video').src = ''; 
+            document.getElementById('view-aula').style.display = 'none'; 
+            document.getElementById('view-modulo').style.display = 'block'; 
+            if (currentContext.modulo_id) {
+                carregarAulas(); 
+            } else {
+                carregarAulaBoasVindasIniciais();
+            }
+        });
         
         document.getElementById('form-add-modulo').addEventListener('submit', e => { e.preventDefault(); let modId = document.getElementById('mod-id').value; apiFetch({ action: modId ? 'editar_modulo' : 'cadastrar_modulo', id_modulo: modId, nome: document.getElementById('mod-nome').value, descricao: document.getElementById('mod-desc').value, oculto: document.getElementById('mod-oculto').value }).then(data => { if(data) showToast(data.mensagem); document.getElementById('modal-modulo').style.display = 'none'; carregarModulos(); }); });
         
@@ -1466,6 +1531,37 @@
                 carregarAulas(true); 
             }); 
         });
+
+        function carregarComentariosAula() { 
+            apiFetch({ action: 'listar_comentarios', modulo: currentContext.modulo_id || '', aula: currentContext.aula_id }).then(data => { 
+                if(!data) return;
+                const list = document.getElementById('comments-list-aula'); list.innerHTML = ''; cacheComentariosAula = data.comentarios || []; 
+                if (cacheComentariosAula.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhum comentário.</p>'; return; } 
+                cacheComentariosAula.forEach((c, idx) => { 
+                    let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioAula(${idx})">Excluir</button>` : ''; 
+                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(c.matricula)})</span>` : '';
+                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${escaparHtml(c.nome).charAt(0).toUpperCase()}</div>`;
+                    let textoProc = processarTextoComLinks(c.comentario);
+                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${escaparHtml(c.nome)}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
+                }); 
+            }); 
+        }
+
+        document.getElementById('form-comentario-aula').addEventListener('submit', e => { 
+            e.preventDefault(); 
+            apiFetch({ action: 'adicionar_comentario', comentario: document.getElementById('texto-comentario-aula').value, modulo: currentContext.modulo_id || '', aula: currentContext.aula_id }).then(data => { 
+                if (data && data.status !== 'sucesso') { showToast(data.mensagem, true); return; } 
+                document.getElementById('texto-comentario-aula').value = ''; 
+                carregarComentariosAula(); 
+            }); 
+        });
+
+        function deletarComentarioAula(idx) { 
+            let c = cacheComentariosAula[idx]; 
+            abrirModalConfirmacao("Excluir comentário?", () => { 
+                apiFetch({ action: 'deletar_comentario', modulo: currentContext.modulo_id || '', aula: currentContext.aula_id, comentario: c.comentario }).then(() => carregarComentariosAula()); 
+            }); 
+        }
 
         function abrirPlayerFilme(driveId, titulo, descricao) { 
             document.getElementById('titulo-player-filme').textContent = titulo || 'Filme'; 
