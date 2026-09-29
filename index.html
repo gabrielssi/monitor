@@ -162,6 +162,15 @@
         .video-container iframe { width: 100%; height: 100%; border: none; }
         .description-box { background-color: var(--container-bg); padding: 30px; border-radius: 16px; border: 1px solid var(--input-border); margin-bottom: 30px; max-width: 950px; }
         
+        /* ATUALIZAÇÃO: Descrição da aula justificada */
+        #desc-aula-selecionada {
+            color: var(--text-muted);
+            line-height: 1.6;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            text-align: justify;
+        }
+        
         .btn-concluir { background: var(--success-color); color: white; border: none; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; }
         .btn-concluir.concluida { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success-color); color: var(--success-color); }
 
@@ -187,7 +196,16 @@
         .comment-content { flex: 1; }
         .comment-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
         .comment-name { font-weight: 700; font-size: 15px; color: var(--primary-color); }
-        .comment-text { font-size: 14px; line-height: 1.6; white-space: pre-wrap; color: var(--text-main); }
+        
+        /* ATUALIZAÇÃO: Texto dos comentários justificado */
+        .comment-text {
+            font-size: 14px;
+            line-height: 1.6;
+            white-space: pre-wrap;
+            color: var(--text-main);
+            text-align: justify;
+        }
+
         .link-destaque { color: var(--primary-color); text-decoration: none; font-weight: 600; }
         .link-destaque:hover { text-decoration: underline; }
 
@@ -1094,16 +1112,13 @@ function carregarAulaBoasVindasIniciais() {
             let aula = data.aula;
             currentContext.aula_id = aula.aula_id;
 
-            // Esconde a grelha/lista de módulos e exibe diretamente a visualização do vídeo/aula
             document.getElementById('view-modulo').style.display = 'none';
             document.getElementById('view-aula').style.display = 'block';
 
-            // Preenche os dados da página de visualização da aula
             document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula || 'Boas-Vindas!';
             document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao || 'Assista ao vídeo abaixo para começar.');
             document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
 
-            // Ajusta o anexo se existir
             if (aula.anexo_url) {
                 document.getElementById('box-anexo-aula').style.display = 'block';
                 document.getElementById('link-anexo-aula').href = aula.anexo_url;
@@ -1112,10 +1127,8 @@ function carregarAulaBoasVindasIniciais() {
                 document.getElementById('link-anexo-aula').href = '#';
             }
 
-            // Esconde o botão de conclusão se for a aula inicial
             document.getElementById('btn-concluir-aula').style.display = 'none';
 
-            // Carrega os comentários/dúvidas da aula
             carregarComentariosAula();
         }
     }).catch(() => {});
