@@ -1087,56 +1087,39 @@
             setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
         }
 
-        function carregarAulaBoasVindasIniciais() {
-            if (currentContext.modulo_id) return Promise.resolve();
-            return apiFetch({ action: 'obter_aula_boasvindas' }).then(data => {
-                if (data && data.status === 'sucesso' && data.aula) {
-                    let aula = data.aula;
-                    document.getElementById('titulo-modulo-selecionado').textContent = aula.nome_aula || 'Boas-Vindas!';
-                    document.getElementById('desc-modulo-selecionado').textContent = 'Assista ao vídeo abaixo para começar.';
-                    
-                    let containerBusca = document.getElementById('container-busca-aulas');
-                    if (containerBusca) containerBusca.style.display = 'none';
+function carregarAulaBoasVindasIniciais() {
+    if (currentContext.modulo_id) return Promise.resolve();
+    return apiFetch({ action: 'obter_aula_boasvindas' }).then(data => {
+        if (data && data.status === 'sucesso' && data.aula) {
+            let aula = data.aula;
+            currentContext.aula_id = aula.aula_id;
 
-                    document.getElementById('btn-editar-modulo').style.display = 'none';
-                    document.getElementById('btn-deletar-modulo').style.display = 'none';
-                    document.getElementById('btn-abrir-modal-aula').style.display = 'none';
+            // Esconde a grelha/lista de módulos e exibe diretamente a visualização do vídeo/aula
+            document.getElementById('view-modulo').style.display = 'none';
+            document.getElementById('view-aula').style.display = 'block';
 
-                    const grid = document.getElementById('aulas-grid');
-                    grid.innerHTML = '';
+            // Preenche os dados da página de visualização da aula
+            document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula || 'Boas-Vindas!';
+            document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao || 'Assista ao vídeo abaixo para começar.');
+            document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
 
-                    let card = document.createElement('div');
-                    card.className = 'aula-card';
-                    let ytId = obterIdYoutube(aula.link);
-                    let driveId = !ytId ? extrairIdGoogleDrive(aula.link) : null;
-                    let thumbStyle = ytId ? `background-image: url('https://img.youtube.com/vi/${ytId}/hqdefault.jpg');` : (driveId ? `background-image: url('https://drive.google.com/thumbnail?id=${driveId}&sz=w500');` : '');
+            // Ajusta o anexo se existir
+            if (aula.anexo_url) {
+                document.getElementById('box-anexo-aula').style.display = 'block';
+                document.getElementById('link-anexo-aula').href = aula.anexo_url;
+            } else {
+                document.getElementById('box-anexo-aula').style.display = 'none';
+                document.getElementById('link-anexo-aula').href = '#';
+            }
 
-                    card.innerHTML = `<div class="aula-card-thumb" style="${thumbStyle}"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${escaparHtml(aula.nome_aula)}</h4><p>${escaparHtml(aula.descricao || '')}</p></div>`;
+            // Esconde o botão de conclusão se for a aula inicial
+            document.getElementById('btn-concluir-aula').style.display = 'none';
 
-                    card.onclick = () => {
-                        currentContext.aula_id = aula.aula_id;
-                        document.getElementById('view-modulo').style.display = 'none';
-                        document.getElementById('view-aula').style.display = 'block';
-                        document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula;
-                        document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao);
-                        document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
-
-                        if (aula.anexo_url) {
-                            document.getElementById('box-anexo-aula').style.display = 'block';
-                            document.getElementById('link-anexo-aula').href = aula.anexo_url;
-                        } else {
-                            document.getElementById('box-anexo-aula').style.display = 'none';
-                            document.getElementById('link-anexo-aula').href = '#';
-                        }
-
-                        document.getElementById('btn-concluir-aula').style.display = 'none';
-                        carregarComentariosAula();
-                    };
-
-                    grid.appendChild(card);
-                }
-            }).catch(() => {});
+            // Carrega os comentários/dúvidas da aula
+            carregarComentariosAula();
         }
+    }).catch(() => {});
+}
 
         function verificarBoasVindas() {
             if (session && session.classe === 'monitor') return;
