@@ -174,6 +174,15 @@
         .btn-concluir { background: var(--success-color); color: white; border: none; padding: 12px 22px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; margin-top: 18px; }
         .btn-concluir.concluida { background: rgba(16, 185, 129, 0.15); border: 1px solid var(--success-color); color: var(--success-color); }
 
+        /* Navegação entre aulas (Anterior / Próxima) */
+        .aula-nav { display: flex; justify-content: space-between; align-items: center; gap: 12px; max-width: 950px; margin-bottom: 30px; }
+        .aula-nav-btn { background: var(--container-card); border: 1px solid var(--input-border); color: var(--text-main); padding: 12px 20px; border-radius: 10px; font-size: 14px; font-weight: 700; cursor: pointer; display: inline-flex; align-items: center; gap: 8px; transition: border-color .2s, background .2s; }
+        .aula-nav-btn:hover { border-color: var(--primary-color); }
+        .aula-nav-btn.next { background: var(--primary-gradient); border-color: transparent; color: #fff; margin-left: auto; }
+        .aula-nav-btn.next:hover { filter: brightness(1.1); }
+        .aula-nav-btn.next.bloqueado { background: var(--container-card); border: 1px solid var(--input-border); color: var(--text-muted); opacity: 0.6; cursor: not-allowed; filter: none; }
+        @media (max-width: 600px) { .aula-nav { flex-direction: column-reverse; align-items: stretch; } .aula-nav-btn { justify-content: center; } .aula-nav-btn.next { margin-left: 0; } }
+
         .forum-topico-card { background: var(--container-card); border-radius: 14px; padding: 24px; border: 1px solid var(--input-border); margin-bottom: 20px; position: relative; }
         .forum-topico-card:hover { border-color: var(--primary-color); }
         .forum-topico-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px; }
@@ -378,6 +387,11 @@
                         </div>
                         
                         <button id="btn-concluir-aula" class="btn-concluir" style="display:none;"><span>✓</span> Marcar como Concluída</button>
+                    </div>
+
+                    <div class="aula-nav" id="aula-nav" style="display:none;">
+                        <button type="button" class="aula-nav-btn prev" id="btn-aula-anterior">← Aula anterior</button>
+                        <button type="button" class="aula-nav-btn next" id="btn-aula-proxima">Próxima aula →</button>
                     </div>
 
                     <div class="comments-section">
@@ -803,25 +817,7 @@
                             cacheAulasDoModulo = dataAulas.aulas || []; let aula = cacheAulasDoModulo.find(a => a.aula_id === n.ref_aula);
                             if (!aula) { renderizarAulas(cacheAulasDoModulo); showToast('Aula não disponível.', true); return; }
                             
-                            currentContext.aula_id = aula.aula_id; 
-                            document.getElementById('view-modulo').style.display = 'none'; 
-                            document.getElementById('view-aula').style.display = 'block';
-                            document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula; 
-                            document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao); 
-                            document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
-                            
-                            if (aula.anexo_url) {
-                                document.getElementById('box-anexo-aula').style.display = 'block';
-                                document.getElementById('link-anexo-aula').href = aula.anexo_url;
-                            } else {
-                                document.getElementById('box-anexo-aula').style.display = 'none';
-                                document.getElementById('link-anexo-aula').href = '#';
-                            }
-
-                            document.getElementById('btn-concluir-aula').style.display = (session.classe === 'monitor') ? 'none' : 'inline-flex'; 
-                            if (session.classe !== 'monitor') atualizarEstadoBotaoConcluir(aula.aula_id);
-                            
-                            carregarComentariosAula(); 
+                            abrirAula(aula);
                             setTimeout(() => { const el = document.getElementById('comments-list-aula'); if (el) el.scrollIntoView({ behavior: 'smooth', block: 'center' }); }, 300);
                         });
                     });
@@ -1128,6 +1124,7 @@ function carregarAulaBoasVindasIniciais() {
             }
 
             document.getElementById('btn-concluir-aula').style.display = 'none';
+            document.getElementById('aula-nav').style.display = 'none';
 
             carregarComentariosAula();
         }
@@ -1470,28 +1467,63 @@ function carregarAulaBoasVindasIniciais() {
                 card.innerHTML = `${badgeConcluidaHTML}<div class="aula-card-thumb" style="${thumbStyle}">${playOrLockIconHTML}</div><div class="aula-card-body"><h4>${escaparHtml(aula.nome_aula)}</h4><p>${escaparHtml(aula.descricao || '')}</p></div>${editButtonsHTML}`;
                 card.onclick = () => {
                     if (!liberada) { showToast("Conclua a aula anterior para desbloquear esta!", true); return; }
-                    currentContext.aula_id = aula.aula_id; 
-                    document.getElementById('view-modulo').style.display = 'none'; 
-                    document.getElementById('view-aula').style.display = 'block'; 
-                    document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula; 
-                    document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao); 
-                    document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
-                    
-                    if (aula.anexo_url) {
-                        document.getElementById('box-anexo-aula').style.display = 'block';
-                        document.getElementById('link-anexo-aula').href = aula.anexo_url;
-                    } else {
-                        document.getElementById('box-anexo-aula').style.display = 'none';
-                        document.getElementById('link-anexo-aula').href = '#';
-                    }
-
-                    let btnConcluir = document.getElementById('btn-concluir-aula');
-                    if (session.classe === 'monitor') { btnConcluir.style.display = 'none'; } else {
-                        btnConcluir.style.display = 'inline-flex'; atualizarEstadoBotaoConcluir(aula.aula_id);
-                        btnConcluir.onclick = () => { btnConcluir.disabled = true; apiFetch({ action: 'marcar_aula_concluida', aula_id: aula.aula_id }).then(res => { btnConcluir.disabled = false; if (res && res.status === 'sucesso') { if (!cacheAulasConcluidas.includes(aula.aula_id)) { cacheAulasConcluidas.push(aula.aula_id); } atualizarEstadoBotaoConcluir(aula.aula_id); showToast("Aula registrada como concluída!"); } else { showToast("Erro ao registrar.", true); } }).catch(() => { btnConcluir.disabled = false; showToast("Erro de conexão.", true); }); };
-                    } carregarComentariosAula();
+                    abrirAula(aula);
                 }; grid.appendChild(card);
             });
+        }
+
+        // Abre uma aula (usado pelos cards, pelas notificações e pelos botões Anterior/Próxima)
+        function abrirAula(aula) {
+            currentContext.aula_id = aula.aula_id;
+            document.getElementById('view-modulo').style.display = 'none';
+            document.getElementById('view-aula').style.display = 'block';
+            document.getElementById('titulo-aula-selecionada').textContent = aula.nome_aula;
+            document.getElementById('desc-aula-selecionada').innerHTML = processarTextoComLinks(aula.descricao);
+            document.getElementById('iframe-video').src = formatarUrlVideo(aula.link);
+
+            if (aula.anexo_url) {
+                document.getElementById('box-anexo-aula').style.display = 'block';
+                document.getElementById('link-anexo-aula').href = aula.anexo_url;
+            } else {
+                document.getElementById('box-anexo-aula').style.display = 'none';
+                document.getElementById('link-anexo-aula').href = '#';
+            }
+
+            let btnConcluir = document.getElementById('btn-concluir-aula');
+            if (session.classe === 'monitor') { btnConcluir.style.display = 'none'; } else {
+                btnConcluir.style.display = 'inline-flex'; atualizarEstadoBotaoConcluir(aula.aula_id);
+                btnConcluir.onclick = () => { btnConcluir.disabled = true; apiFetch({ action: 'marcar_aula_concluida', aula_id: aula.aula_id }).then(res => { btnConcluir.disabled = false; if (res && res.status === 'sucesso') { if (!cacheAulasConcluidas.includes(aula.aula_id)) { cacheAulasConcluidas.push(aula.aula_id); } atualizarEstadoBotaoConcluir(aula.aula_id); atualizarNavegacaoAulas(); showToast("Aula registrada como concluída!"); } else { showToast("Erro ao registrar.", true); } }).catch(() => { btnConcluir.disabled = false; showToast("Erro de conexão.", true); }); };
+            }
+            atualizarNavegacaoAulas();
+            carregarComentariosAula();
+        }
+
+        // Atualiza os botões "Aula anterior" / "Próxima aula"
+        function atualizarNavegacaoAulas() {
+            const nav = document.getElementById('aula-nav');
+            const btnPrev = document.getElementById('btn-aula-anterior');
+            const btnNext = document.getElementById('btn-aula-proxima');
+            const idx = currentContext.modulo_id ? cacheAulasDoModulo.findIndex(a => a.aula_id === currentContext.aula_id) : -1;
+            if (idx === -1) { nav.style.display = 'none'; return; }   // ex.: aula de boas-vindas (fora de módulo)
+
+            const ehMonitor = (session.classe === 'monitor');
+            const anterior = cacheAulasDoModulo[idx - 1];
+            const proxima = cacheAulasDoModulo[idx + 1];
+            nav.style.display = (anterior || proxima) ? 'flex' : 'none';
+
+            btnPrev.style.display = anterior ? 'inline-flex' : 'none';
+            btnPrev.onclick = () => { if (anterior) { abrirAula(anterior); window.scrollTo({ top: 0, behavior: 'smooth' }); } };
+
+            btnNext.style.display = proxima ? 'inline-flex' : 'none';
+            if (proxima) {
+                const liberada = ehMonitor || cacheAulasConcluidas.includes(cacheAulasDoModulo[idx].aula_id);
+                btnNext.classList.toggle('bloqueado', !liberada);
+                btnNext.innerHTML = liberada ? 'Próxima aula →' : '🔒 Próxima aula';
+                btnNext.onclick = () => {
+                    if (!liberada) { showToast('Marque esta aula como concluída para liberar a próxima!', true); return; }
+                    abrirAula(proxima); window.scrollTo({ top: 0, behavior: 'smooth' });
+                };
+            }
         }
         document.getElementById('busca-aulas').addEventListener('input', function() { let termo = this.value.trim().toLowerCase(); let filtradas = termo ? cacheAulasDoModulo.filter(a => (a.nome_aula || '').toLowerCase().includes(termo)) : cacheAulasDoModulo; renderizarAulas(filtradas); });
         function atualizarEstadoBotaoConcluir(aulaId) { let btnConcluir = document.getElementById('btn-concluir-aula'); if (cacheAulasConcluidas.includes(aulaId)) { btnConcluir.className = 'btn-concluir concluida'; btnConcluir.innerHTML = '<span>✓</span> Aula Concluída'; } else { btnConcluir.className = 'btn-concluir'; btnConcluir.innerHTML = '<span>✓</span> Marcar como Concluída'; } }
