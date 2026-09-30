@@ -591,7 +591,7 @@
     <div class="modal-overlay" id="modal-responder-quiz"><div class="modal-content" style="max-width: 550px;"><span class="close-modal" onclick="tentarFecharModalQuiz()">&times;</span><div class="header"><h1 id="quiz-modal-titulo">Quiz</h1><p id="quiz-timer-display" style="color: var(--danger-color); font-weight: 700; font-size: 16px; margin-top: 5px;"></p></div><div id="quiz-modal-corpo" style="margin-bottom: 25px;"><p id="quiz-modal-pergunta" style="font-size: 16px; font-weight: 600; margin-bottom: 20px; line-height: 1.5;"></p><div id="quiz-modal-opcoes" style="display: flex; flex-direction: column; gap: 12px; margin-bottom: 20px;"></div><div id="quiz-feedback-box" style="display: none; padding: 15px; border-radius: 10px; margin-bottom: 20px; font-weight: 600; line-height: 1.5;"></div><button class="btn-submit" id="btn-proxima-questao" style="display: none;" onclick="proximaQuestaoQuiz()">Próxima Questão</button></div></div></div>
     <div class="modal-overlay" id="modal-pergunta-quiz"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-pergunta-quiz').style.display='none'">&times;</span><div class="header"><h1 id="titulo-modal-pergunta">Nova Pergunta</h1></div><form id="form-pergunta-quiz"><input type="hidden" id="perg-id"><div class="form-group"><label>Categoria</label><select id="perg-categoria" required><option value="PYTHON">PYTHON</option><option value="C">C</option><option value="C++">C++</option><option value="LOGICA">LÓGICA</option><option value="OUTROS">OUTROS</option></select></div><div class="form-group"><label>Enunciado</label><textarea id="perg-enunciado" rows="4" required maxlength="1000" placeholder="Digite a afirmação que o aluno vai avaliar como Verdadeira ou Falsa"></textarea></div><div class="form-group"><label>Gabarito</label><select id="perg-gabarito" required><option value="V">Verdadeiro</option><option value="F">Falso</option></select></div><div class="form-group"><label>Explicação (mostrada após a resposta)</label><textarea id="perg-explicacao" rows="3" required maxlength="1000" placeholder="Explique por que a resposta está correta"></textarea></div><button type="submit" class="btn-submit">Salvar Pergunta</button></form></div></div>
     <div class="modal-overlay" id="modal-confirmacao"><div class="modal-content" style="max-width: 420px; text-align: center;"><span class="close-modal" onclick="fecharModalConfirmacao()">&times;</span><div class="modal-confirm-box"><h2 style="margin-bottom: 10px; font-size: 20px;">Confirmar Ação</h2><p id="texto-confirmacao-modal" style="color: var(--text-muted); margin-bottom: 20px;"></p><div style="display: flex; gap: 12px;"><button class="btn-submit" style="background: var(--input-border);" onclick="fecharModalConfirmacao()">Cancelar</button><button class="btn-submit btn-danger" onclick="confirmarAcaoModal()">Confirmar</button></div></div></div></div>
-    <div class="modal-overlay" id="modal-alerta-geral"><div class="modal-content" style="max-width: 450px;"><span class="close-modal" onclick="document.getElementById('modal-alerta-geral').style.display='none'">&times;</span><div class="header"><h1>Novo Aviso</h1></div><p id="texto-alerta-modal" style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.5;"></p><button class="btn-submit" onclick="document.getElementById('modal-alerta-geral').style.display='none'">Entendido</button></div></div>
+    <div class="modal-overlay" id="modal-alerta-geral" style="z-index: 10001;"><div class="modal-content" style="max-width: 450px;"><span class="close-modal" onclick="document.getElementById('modal-alerta-geral').style.display='none'">&times;</span><div class="header"><h1>Novo Aviso</h1></div><p id="texto-alerta-modal" style="margin-bottom: 20px; color: var(--text-muted); line-height: 1.5;"></p><button class="btn-submit" onclick="document.getElementById('modal-alerta-geral').style.display='none'">Entendido</button></div></div>
     <div class="modal-overlay" id="modal-compartilhar"><div class="modal-content" style="max-width: 380px; text-align: center;"><span class="close-modal" onclick="document.getElementById('modal-compartilhar').style.display='none'">&times;</span><div class="header"><h1>Compartilhar (QR Presencial)</h1></div><div style="background: #fff; padding: 15px; border-radius: 12px; display: inline-block; margin-bottom: 20px;"><img id="qrcode-img" src="" alt="QR" style="width: 200px; height: 200px; display: block;"></div><p style="font-size: 12px; color: var(--text-muted); margin-bottom: 15px;">Este QR Code abre direto na tela de Registro de Presença.</p><button class="btn-submit" onclick="copiarLinkSite()">Copiar Link</button></div></div>
     <div class="modal-overlay" id="modal-editar-horario"><div class="modal-content" style="max-width: 600px;"><span class="close-modal" onclick="document.getElementById('modal-editar-horario').style.display='none'">&times;</span><div class="header"><h1>Editar Horário</h1></div><form id="form-editar-horario"><input type="hidden" id="edit-horario-email"><div class="form-group"><label>Sala</label><input type="text" id="edit-sala" required></div><div class="form-group"><label>Segunda</label><input type="text" id="edit-segunda"></div><div class="form-group"><label>Terça</label><input type="text" id="edit-terca"></div><div class="form-group"><label>Quarta</label><input type="text" id="edit-quarta"></div><div class="form-group"><label>Quinta</label><input type="text" id="edit-quinta"></div><div class="form-group"><label>Sexta</label><input type="text" id="edit-sexta"></div><button type="submit" class="btn-submit">Salvar Horário</button></form></div></div>
     <div class="modal-overlay" id="modal-topico-forum"><div class="modal-content"><span class="close-modal" onclick="document.getElementById('modal-topico-forum').style.display='none'">&times;</span><div class="header"><h1>Novo Tópico</h1></div><form id="form-add-topico"><div class="form-group"><label>Título</label><input type="text" id="topico-titulo" required maxlength="120"></div><div class="form-group"><label>Texto</label><textarea id="topico-texto" rows="5" required maxlength="500"></textarea></div><button type="submit" class="btn-submit">Publicar Tópico</button></form></div></div>
@@ -898,13 +898,20 @@
 
         function verificarAlertaPlataforma() {
             return apiFetch({ action: 'obter_alerta' }).then(data => {
-                if (data && data.status === 'sucesso' && data.alerta && data.alerta.trim() !== '') {
-                    if (window.ultimo_aviso_visto !== data.alerta.trim()) { 
-                        document.getElementById('texto-alerta-modal').textContent = data.alerta.trim(); 
-                        document.getElementById('modal-alerta-geral').style.display = 'flex'; 
-                        window.ultimo_aviso_visto = data.alerta.trim();
-                    }
-                }
+                if (!data || data.status !== 'sucesso') return;
+                const texto = (data.alerta || '').trim();
+                if (!texto) return;
+
+                // Identifica o aviso pelo ID (data de criação), não pelo texto
+                const idAviso = String(data.alerta_id || texto);
+                let visto = null;
+                try { visto = localStorage.getItem('monitoria_aviso_visto'); } catch (e) {}
+                if (visto === idAviso || window.ultimo_aviso_visto === idAviso) return;
+
+                document.getElementById('texto-alerta-modal').textContent = texto;
+                document.getElementById('modal-alerta-geral').style.display = 'flex';
+                window.ultimo_aviso_visto = idAviso;
+                try { localStorage.setItem('monitoria_aviso_visto', idAviso); } catch (e) {}
             }).catch(() => {});
         }
 
@@ -1176,6 +1183,7 @@
 
             setTimeout(verificarBoasVindas, 600);
             setInterval(() => { checarNotificacoes(); verificarAlertaPlataforma(); }, 10000);
+            document.addEventListener('visibilitychange', () => { if (!document.hidden) verificarAlertaPlataforma(); });
         }
 
         function carregarAulaBoasVindasIniciais() {
