@@ -59,6 +59,12 @@
         .form-group input, .form-group select, .form-group textarea { width: 100%; padding: 12px 16px; border: 1px solid var(--input-border); border-radius: 10px; background-color: var(--input-bg); color: var(--text-main); font-size: 14px; outline: none; font-family: inherit; }
         .form-group input:focus, .form-group select:focus, .form-group textarea:focus { border-color: var(--primary-color); }
         
+        /* ESTILOS PARA VISUALIZADOR DE SENHA */
+        .password-wrapper { position: relative; width: 100%; display: flex; align-items: center; }
+        .password-wrapper input { padding-right: 44px; }
+        .btn-toggle-password { position: absolute; right: 12px; background: none; border: none; color: var(--text-muted); cursor: pointer; display: flex; align-items: center; justify-content: center; padding: 4px; border-radius: 6px; transition: color 0.2s; }
+        .btn-toggle-password:hover { color: var(--primary-color); }
+
         .btn-submit { width: 100%; padding: 14px; background: var(--primary-gradient); color: #ffffff; border: none; border-radius: 10px; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity 0.2s ease; }
         .btn-submit:hover { opacity: 0.9; }
         .btn-submit:disabled { opacity: 0.6; cursor: not-allowed; }
@@ -291,7 +297,15 @@
                 <form id="form-login">
                     <input type="hidden" name="action" value="login">
                     <div class="form-group"><label>E-mail de Acesso</label><input type="email" name="email" required placeholder="Seu e-mail cadastrado"></div>
-                    <div class="form-group"><label>Senha</label><input type="password" name="senha" required placeholder="Sua senha"></div>
+                    <div class="form-group">
+                        <label>Senha</label>
+                        <div class="password-wrapper">
+                            <input type="password" id="input-login-senha" name="senha" required placeholder="Sua senha">
+                            <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('input-login-senha', this)" title="Alternar visualização da senha">
+                                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                            </button>
+                        </div>
+                    </div>
                     <button type="submit" class="btn-submit" id="btn-submit-login">Entrar</button>
                     <div style="text-align: right; margin-top: 10px;">
                         <a href="#" id="link-esqueci-senha" style="font-size: 12px; color: var(--primary-color); text-decoration: none;">Esqueci minha senha</a>
@@ -576,9 +590,33 @@
             <span class="close-modal" onclick="document.getElementById('modal-senha').style.display='none'">&times;</span>
             <div class="header"><h1>Alterar Senha</h1></div>
             <form id="form-alt-senha">
-                <div class="form-group"><label>Senha Atual</label><input type="password" id="pass-atual" required></div>
-                <div class="form-group"><label>Nova Senha (mínimo 8 caracteres)</label><input type="password" id="pass-nova" minlength="8" required></div>
-                <div class="form-group"><label>Confirmar Nova Senha</label><input type="password" id="pass-confirma" minlength="8" required></div>
+                <div class="form-group">
+                    <label>Senha Atual</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="pass-atual" required>
+                        <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('pass-atual', this)" title="Alternar visualização">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Nova Senha (mínimo 8 caracteres)</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="pass-nova" minlength="8" required>
+                        <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('pass-nova', this)" title="Alternar visualização">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Confirmar Nova Senha</label>
+                    <div class="password-wrapper">
+                        <input type="password" id="pass-confirma" minlength="8" required>
+                        <button type="button" class="btn-toggle-password" onclick="togglePasswordVisibility('pass-confirma', this)" title="Alternar visualização">
+                            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                        </button>
+                    </div>
+                </div>
                 <button type="submit" class="btn-submit">Atualizar Senha</button>
             </form>
         </div>
@@ -651,6 +689,22 @@
     </div>
 
     <script>
+        function togglePasswordVisibility(inputId, btnElement) {
+            const input = document.getElementById(inputId);
+            if (!input) return;
+            const isPassword = input.type === 'password';
+            input.type = isPassword ? 'text' : 'password';
+            
+            // Altera o ícone do botão
+            if (isPassword) {
+                // Ícone Olho Riscado (Senha Visível)
+                btnElement.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>`;
+            } else {
+                // Ícone Olho Normal (Senha Oculta)
+                btnElement.innerHTML = `<svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>`;
+            }
+        }
+
         function escapeParaJS(str) { if (!str) return ''; return str.replace(/\\/g, '\\\\').replace(/'/g, "\\'").replace(/"/g, '&quot;').replace(/\n/g, '\\n').replace(/\r/g, ''); }
         
         function processarTextoComLinks(texto) { 
