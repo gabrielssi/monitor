@@ -489,7 +489,7 @@
                         <div class="form-group"><label>Tempo Limite (Minutos)</label><input type="number" id="quiz-tempo-input" value="5" min="1" max="60"></div>
                         <div style="display: flex; gap: 15px; align-items: center; margin-top: 20px;"><button class="btn-submit" onclick="salvarEIniciarQuiz('sim')">Liberar Quiz para Alunos</button><button class="btn-submit btn-danger" onclick="salvarEIniciarQuiz('nao')">Ocultar Quiz</button></div>
                     </div>
-                    <div class="description-box" style="background: var(--container-card);"><h3 style="margin-bottom: 15px; color: var(--primary-color);">Ranking de Pontuação dos Estudantes</h3><div class="schedule-table-wrapper"><table class="schedule-table"><thead><tr><th>Posição</th><th>Matrícula</th><th>Nome</th><th>Pontuação Total</th></tr></thead><tbody id="ranking-tbody"><tr><td colspan="4">Carregando ranking...</td></tr></tbody></table></div></div>
+                    <div class="description-box" style="background: var(--container-card)"><h3 style="margin-bottom: 15px; color: var(--primary-color);">Ranking de Pontuação dos Estudantes</h3><div class="schedule-table-wrapper"><table class="schedule-table"><thead><tr><th>Posição</th><th>Matrícula</th><th>Nome</th><th>Pontuação Total</th></tr></thead><tbody id="ranking-tbody"><tr><td colspan="4">Carregando ranking...</td></tr></tbody></table></div></div>
                     <div class="description-box" style="background: var(--container-card); margin-top: 25px;">
                         <div style="display:flex; align-items:center; justify-content:space-between; margin-bottom: 15px; flex-wrap: wrap; gap: 10px;">
                             <h3 style="color: var(--primary-color);">Perguntas Cadastradas</h3>
@@ -1623,256 +1623,462 @@
             const buscaWrapper = document.getElementById('filmes-busca-wrapper');
             return apiFetch({ action: 'listar_filmes' }).then(data => {
                 if(!data) return;
-                const grid = document.getElementById('filmes-grid'); const avisoBox = document.getElementById('filmes-bloqueado-aviso');
-                if (data.bloqueado) { avisoBox.style.display = 'block'; avisoBox.textContent = data.motivo; grid.innerHTML = ''; buscaWrapper.style.display = 'none'; return; }
-                avisoBox.style.display = 'none';
+                const grid = document.getElementById('filmes-grid');
+                grid.innerHTML = '';
+                if (data.bloqueado) {
+                    document.getElementById('filmes-bloqueado-aviso').style.display = 'block';
+                    document.getElementById('filmes-bloqueado-aviso').innerHTML = `<h3 style="color:var(--danger-color); margin-bottom:10px;">Acesso Indisponível</h3><p style="color:var(--text-muted);">${data.motivo}</p>`;
+                    buscaWrapper.style.display = 'none';
+                    return;
+                }
+                document.getElementById('filmes-bloqueado-aviso').style.display = 'none';
                 cacheFilmes = data.filmes || [];
-                buscaWrapper.style.display = cacheFilmes.length > 4 ? 'block' : 'none';
-                document.getElementById('filmes-busca-input').value = '';
-                renderizarGridFilmes(cacheFilmes);
+                if (cacheFilmes.length > 0) {
+                    buscaWrapper.style.display = 'block';
+                } else {
+                    buscaWrapper.style.display = 'none';
+                }
+                renderizarFilmes(cacheFilmes);
             });
         }
 
-        function renderizarGridFilmes(lista, mensagemVazio) {
-            const grid = document.getElementById('filmes-grid'); grid.innerHTML = '';
-            if (!lista || lista.length === 0) { grid.innerHTML = `<p style="color:var(--text-muted);">${mensagemVazio || 'Nenhum filme disponível ainda.'}</p>`; return; }
+        function renderizarFilmes(lista) {
+            const grid = document.getElementById('filmes-grid');
+            grid.innerHTML = '';
+            let ehMonitor = (session.classe === 'monitor');
+            if (lista.length === 0) {
+                grid.innerHTML = '<p style="color:var(--text-muted);">Nenhum filme encontrado.</p>';
+                return;
+            }
             lista.forEach(f => {
-                let card = document.createElement('div'); card.className = 'aula-card';
-                let hiddenBadge = (f.oculto === 'sim') ? `<div class="aula-badge-concluida" style="background:var(--danger-color);">Oculto</div>` : '';
-                let editHTML = (session.classe === 'monitor') ? `<div class="aula-actions"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarFilme('${escapeParaJS(f.id)}','${escapeParaJS(f.titulo)}','${escapeParaJS(f.drive_id)}','${escapeParaJS(f.capa)}','${escapeParaJS(f.descricao)}','${escapeParaJS(f.oculto)}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarFilme('${escapeParaJS(f.id)}')">Excluir</button></div>` : '';
-                card.innerHTML = `${hiddenBadge}<div class="aula-card-thumb" style="background-image:url('${f.capa}');"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${escaparHtml(f.titulo)}</h4></div>${editHTML}`;
-                card.onclick = () => { abrirPlayerFilme(f.drive_id, f.titulo, f.descricao); }; grid.appendChild(card);
+                let card = document.createElement('div');
+                card.className = 'aula-card';
+                let editHtml = ehMonitor ? `<div class="aula-actions" style="display:flex; gap:4px; z-index:10;"><button class="btn-text-action" onclick="event.stopPropagation(); abrirModalEditarFilme('${f.id}', '${escapeParaJS(f.titulo)}', '${f.drive_id}', '${f.capa}', '${escapeParaJS(f.descricao)}', '${f.oculto}')">Editar</button><button class="btn-text-action danger" onclick="event.stopPropagation(); deletarFilme('${f.id}')">Excluir</button></div>` : '';
+                let opacityStyle = (f.oculto === 'sim') ? 'opacity: 0.6;' : '';
+                let badgeOculto = (f.oculto === 'sim' && ehMonitor) ? `<div class="aula-badge-concluida" style="background:var(--danger-color);">Oculto</div>` : '';
+                card.style.cssText = opacityStyle;
+                card.innerHTML = `${badgeOculto}<div class="aula-card-thumb" style="background-image: url('${f.capa}');"><div class="aula-card-play-icon">▶</div></div><div class="aula-card-body"><h4>${escaparHtml(f.titulo)}</h4></div>${editHtml}`;
+                card.onclick = () => { abrirPlayerFilme(f.drive_id, f.titulo, f.descricao); };
+                grid.appendChild(card);
             });
         }
-        
+
         function filtrarFilmes() {
-            const termo = document.getElementById('filmes-busca-input').value.trim().toLowerCase();
-            if (!termo) { renderizarGridFilmes(cacheFilmes); return; }
-            const filtrados = cacheFilmes.filter(f => (f.titulo || '').toLowerCase().includes(termo));
-            renderizarGridFilmes(filtrados, 'Nenhum filme encontrado com esse título.');
+            let termo = document.getElementById('filmes-busca-input').value.toLowerCase();
+            let filtrados = termo ? cacheFilmes.filter(f => f.titulo.toLowerCase().includes(termo)) : cacheFilmes;
+            renderizarFilmes(filtrados);
         }
-        
-        document.getElementById('btn-abrir-modal-filme').addEventListener('click', () => { document.getElementById('form-add-filme').reset(); document.getElementById('filme-id').value = ''; document.getElementById('titulo-modal-filme').textContent = 'Novo Filme'; document.getElementById('modal-filme').style.display = 'flex'; });
-        
-        function abrirModalEditarFilme(id, titulo, driveId, capaUrl, descricao, oculto) { 
-            document.getElementById('filme-id').value = id; 
-            document.getElementById('filme-titulo').value = titulo; 
-            document.getElementById('filme-drive-id').value = driveId; 
-            document.getElementById('filme-capa-url').value = (capaUrl && !capaUrl.includes("drive.google.com/thumbnail")) ? capaUrl : ''; 
-            document.getElementById('filme-desc').value = descricao || '';
-            document.getElementById('filme-oculto').value = oculto || 'nao';
-            document.getElementById('titulo-modal-filme').textContent = 'Editar Filme'; 
-            document.getElementById('modal-filme').style.display = 'flex'; 
-        }
-        
-        function deletarFilme(id) { abrirModalConfirmacao("Excluir filme?", () => { apiFetch({ action: 'deletar_filme', id_filme: id }).then(data => { if(data) showToast(data.mensagem, data.status !== 'sucesso'); carregarFilmes(); }); }); }
-        
-        document.getElementById('form-add-filme').addEventListener('submit', e => { 
-            e.preventDefault(); 
-            let filmeId = document.getElementById('filme-id').value; 
-            apiFetch({ 
-                action: filmeId ? 'editar_filme' : 'cadastrar_filme', 
-                id_filme: filmeId, 
-                titulo: document.getElementById('filme-titulo').value, 
-                drive_id: document.getElementById('filme-drive-id').value, 
-                capa_url: document.getElementById('filme-capa-url').value, 
-                descricao: document.getElementById('filme-desc').value,
-                oculto: document.getElementById('filme-oculto').value
-            }).then(data => { 
-                if(data) showToast(data.mensagem, data.status !== 'sucesso'); 
-                if (data && data.status === 'sucesso') { document.getElementById('modal-filme').style.display = 'none'; carregarFilmes(); } 
-            }); 
+
+        document.getElementById('btn-abrir-modal-filme').addEventListener('click', () => {
+            document.getElementById('form-add-filme').reset();
+            document.getElementById('filme-id').value = '';
+            document.getElementById('titulo-modal-filme').textContent = 'Adicionar Filme';
+            document.getElementById('modal-filme').style.display = 'flex';
         });
 
-        function carregarTopicosForum() { 
-            if (cacheTopicosForum) { renderizarTopicosForum(); return Promise.resolve(); }
-            return apiFetch({ action: 'listar_topicos_forum' }).then(data => { if(data) { cacheTopicosForum = (data.topicos || []).reverse(); renderizarTopicosForum(); } }); 
+        function abrirModalEditarFilme(id, titulo, driveId, capa, desc, oculto) {
+            document.getElementById('filme-id').value = id;
+            document.getElementById('filme-titulo').value = titulo;
+            document.getElementById('filme-drive-id').value = driveId;
+            document.getElementById('filme-capa-url').value = capa;
+            document.getElementById('filme-desc').value = desc;
+            document.getElementById('filme-oculto').value = oculto;
+            document.getElementById('titulo-modal-filme').textContent = 'Editar Filme';
+            document.getElementById('modal-filme').style.display = 'flex';
         }
 
-        function renderizarTopicosForum() { 
-            const container = document.getElementById('forum-topicos-container'); 
-            const termo = (document.getElementById('busca-forum').value || '').trim().toLowerCase(); 
-            
-            let listaFiltrada = termo ? cacheTopicosForum.filter(t => (t.nome_forum || '').toLowerCase().includes(termo)) : [...cacheTopicosForum]; 
-            
-            listaFiltrada.sort((a, b) => (b.fixado === 'sim' ? 1 : 0) - (a.fixado === 'sim' ? 1 : 0));
-            
-            container.innerHTML = ''; 
-            if (listaFiltrada.length === 0) { container.innerHTML = `<p style="color:var(--text-muted); text-align:center; padding:30px;">${termo ? 'Nenhum tópico encontrado para "' + escaparHtml(termo) + '".' : 'Nenhum tópico.'}</p>`; return; } 
-            
-            listaFiltrada.forEach((t) => { 
-                let idx = cacheTopicosForum.indexOf(t); 
-                let ehMonitor = session.classe === 'monitor';
-                let ehAutor = session.matricula.toString() === t.autor_matricula.toString();
-                
-                let deleteBtn = (ehMonitor || ehAutor) ? `<button class="btn-text-action danger" onclick="event.stopPropagation(); deletarTopicoForum(${idx})">Excluir</button>` : ''; 
-                let fixBtn = ehMonitor ? `<button class="btn-text-action" onclick="event.stopPropagation(); alternarFixarTopico(${idx})">${t.fixado === 'sim' ? 'Desfixar' : 'Fixar'}</button>` : '';
-                
-                let matriculaDisplay = ehMonitor ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(t.autor_matricula)})</span>` : '';
-                let avatarHTML = t.autor_foto ? `<img src="${t.autor_foto}" style="width:24px; height:24px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:6px;">` : `<div style="width:24px; height:24px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:6px; font-size: 11px;">${escaparHtml(t.autor_nome).charAt(0).toUpperCase()}</div>`;
-                
-                let badgeFixado = t.fixado === 'sim' ? '<span style="background: var(--primary-color); color: #fff; padding: 2px 8px; border-radius: 12px; font-size: 10px; font-weight: 800; margin-right: 8px; vertical-align: middle;">📌 FIXADO</span>' : '';
-                let bordaDestaque = t.fixado === 'sim' ? 'border-color: var(--primary-color);' : '';
-                
-                let textoProc = processarTextoComLinks(t.texto);
-                
-                container.innerHTML += `<div class="forum-topico-card" style="${bordaDestaque}"><div class="forum-topico-header"><div class="forum-topico-title" onclick='abrirTopicoForum(${idx})'>${badgeFixado}${escaparHtml(t.nome_forum)}</div><div>${fixBtn}${deleteBtn}</div></div><div class="forum-topico-meta" style="display:flex; align-items:center;">${avatarHTML} Por: ${escaparHtml(t.autor_nome)}${matriculaDisplay} • ${escaparHtml(t.data_criacao)}</div><p class="forum-topico-texto">${textoProc}</p></div>`; 
-            }); 
-        }
-        document.getElementById('busca-forum').addEventListener('input', renderizarTopicosForum);
-        
-        function alternarFixarTopico(idx) {
-            let t = cacheTopicosForum[idx];
-            apiFetch({ action: 'fixar_topico_forum', id_forum: t.id_forum }).then(data => {
-                if(data) showToast(data.mensagem, data.status !== 'sucesso');
-                if (data && data.status === 'sucesso') carregarTopicosForum();
+        function deletarFilme(id) {
+            abrirModalConfirmacao("Excluir este filme?", () => {
+                apiFetch({ action: 'deletar_filme', id_filme: id }).then(() => carregarFilmes());
             });
         }
-        
-        function abrirTopicoForum(idx) { 
-            let topico = cacheTopicosForum[idx]; 
-            currentContext.forum_topico_id = topico.id_forum; 
-            document.getElementById('view-forum-lista').style.display = 'none'; 
-            document.getElementById('view-forum-topico').style.display = 'block'; 
-            document.getElementById('detalhe-topico-titulo').textContent = topico.nome_forum; 
-            
-            let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(topico.autor_matricula)})</span>` : '';
-            let avatarHTML = topico.autor_foto ? `<img src="${topico.autor_foto}" style="width:28px; height:28px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); display:inline-block; vertical-align:middle; margin-right:8px;">` : `<div style="width:28px; height:28px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:inline-flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); vertical-align:middle; margin-right:8px; font-size: 12px;">${escaparHtml(topico.autor_nome).charAt(0).toUpperCase()}</div>`;
-            
-            document.getElementById('detalhe-topico-meta').innerHTML = `${avatarHTML} Por: ${escaparHtml(topico.autor_nome)}${matriculaDisplay} • ${escaparHtml(topico.data_criacao)}`; 
-            document.getElementById('detalhe-topico-texto').innerHTML = processarTextoComLinks(topico.texto); 
-            carregarComentariosForum(); 
+
+        document.getElementById('form-add-filme').addEventListener('submit', e => {
+            e.preventDefault();
+            let id = document.getElementById('filme-id').value;
+            apiFetch({
+                action: id ? 'editar_filme' : 'cadastrar_filme',
+                id_filme: id,
+                titulo: document.getElementById('filme-titulo').value,
+                drive_id: document.getElementById('filme-drive-id').value,
+                capa_url: document.getElementById('filme-capa-url').value,
+                descricao: document.getElementById('filme-desc').value,
+                oculto: document.getElementById('filme-oculto').value
+            }).then(() => {
+                document.getElementById('modal-filme').style.display = 'none';
+                carregarFilmes();
+            });
+        });
+
+        function carregarTopicosForum(forcar = false) {
+            if (!forcar && cacheTopicosForum) {
+                renderizarTopicosForum();
+                return Promise.resolve();
+            }
+            return apiFetch({ action: 'listar_topicos_forum' }).then(data => {
+                if (data && data.status === 'sucesso') {
+                    cacheTopicosForum = (data.topicos || []).reverse();
+                    renderizarTopicosForum();
+                }
+            });
         }
 
-        document.getElementById('btn-voltar-forum').addEventListener('click', () => { document.getElementById('view-forum-topico').style.display = 'none'; document.getElementById('view-forum-lista').style.display = 'block'; });
-        document.getElementById('form-add-topico').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'cadastrar_topico_forum', nome_forum: document.getElementById('topico-titulo').value, texto: document.getElementById('topico-texto').value }).then(data => { if(data) showToast(data.mensagem, data.status !== 'sucesso'); if (data && data.status === 'sucesso') { document.getElementById('modal-topico-forum').style.display = 'none'; carregarTopicosForum(); } }); });
-        function deletarTopicoForum(idx) { let t = cacheTopicosForum[idx]; abrirModalConfirmacao("Excluir tópico?", () => { apiFetch({ action: 'deletar_topico_forum', id_forum: t.id_forum }).then(() => { document.getElementById('view-forum-topico').style.display = 'none'; document.getElementById('view-forum-lista').style.display = 'block'; carregarTopicosForum(); }); }); }
+        function renderizarTopicosForum() {
+            let container = document.getElementById('forum-topicos-container');
+            container.innerHTML = '';
+            let termoBusca = document.getElementById('busca-forum').value.toLowerCase();
+            let topicos = termoBusca ? cacheTopicosForum.filter(t => t.nome_forum.toLowerCase().includes(termoBusca)) : cacheTopicosForum;
 
-        function carregarComentariosForum() { 
-            apiFetch({ action: 'listar_comentarios', modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { 
-                if(!data) return;
-                const list = document.getElementById('comments-list-forum'); list.innerHTML = ''; cacheComentariosForum = data.comentarios || []; 
-                if (cacheComentariosForum.length === 0) { list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Nenhuma resposta.</p>'; return; } 
-                cacheComentariosForum.forEach((c, idx) => { 
-                    let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioForum(${idx})">Excluir</button>` : ''; 
-                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(c.matricula)})</span>` : '';
-                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${escaparHtml(c.nome).charAt(0).toUpperCase()}</div>`;
-                    let textoProc = processarTextoComLinks(c.comentario);
-                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${escaparHtml(c.nome)}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div></div></div>`; 
-                }); 
-            }); 
-        }
-
-        document.getElementById('form-alt-senha').addEventListener('submit', e => { 
-            e.preventDefault(); 
-            let atual = document.getElementById('pass-atual').value;
-            let nova = document.getElementById('pass-nova').value;
-            let confirma = document.getElementById('pass-confirma').value;
-
-            if(nova !== confirma) {
-                showToast("As senhas novas não coincidem!", true);
+            if (topicos.length === 0) {
+                container.innerHTML = '<p style="color:var(--text-muted);">Nenhum tópico encontrado.</p>';
                 return;
             }
 
-            let btn = e.target.querySelector('button');
-            btn.disabled = true; btn.textContent = "Atualizando...";
+            let topicosFixados = topicos.filter(t => t.fixado === 'sim');
+            let topicosNormais = topicos.filter(t => t.fixado !== 'sim');
+            let listaOrdenada = [...topicosFixados, ...topicosNormais];
 
-            apiFetch({ action: 'alterar_senha', senha_atual: atual, nova_senha: nova }).then(data => { 
-                if(data) showToast(data.mensagem, data.status !== 'sucesso'); 
-                if(data && data.status === 'sucesso') {
-                    session.senha_alterada = 'sim'; 
-                    document.getElementById('modal-senha').style.display = 'none'; 
-                    document.getElementById('btn-abrir-modal-senha').style.display = 'none'; 
-                    document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block'; 
-                    localStorage.setItem('monitoria_session', JSON.stringify(session)); 
-                    document.getElementById('form-alt-senha').reset();
-                    checarNotificacoes(); 
-                }
-                btn.disabled = false; btn.textContent = "Atualizar Senha";
-            }); 
-        });
-
-        document.getElementById('form-comentario-forum').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'adicionar_comentario', comentario: document.getElementById('texto-comentario-forum').value, modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => { if (data && data.status !== 'sucesso') { showToast(data.mensagem, true); return; } document.getElementById('texto-comentario-forum').value = ''; carregarComentariosForum(); }); });
-        function deletarComentarioForum(idx) { let c = cacheComentariosForum[idx]; abrirModalConfirmacao("Excluir resposta?", () => { apiFetch({ action: 'deletar_comentario', modulo: currentContext.forum_topico_id, aula: 'forum', comentario: c.comentario }).then(() => carregarComentariosForum()); }); }
-
-        function carregarEExibirMonitores() {
-            const container = document.getElementById('monitores-horarios-container'); 
-            if (!cacheMonitores) container.innerHTML = '<p style="color:var(--text-muted); text-align:center;">Carregando...</p>';
-            return apiFetch({ action: 'listar_monitores' }).then(data => { 
-                if(!data) return;
-                cacheMonitores = data.monitores || []; 
-                container.innerHTML = ''; 
-                cacheMonitores.forEach(m => { 
-                    const h = m.horarios || { sala: '-', segunda: '-', terca: '-', quarta: '-', quinta: '-', sexta: '-' }; 
-                    const btnEditHTML = (session.classe === 'monitor') ? `<button class="btn-text-action" onclick="abrirModalEditarHorario('${escapeParaJS(m.email)}', '${escapeParaJS(h.sala)}', '${escapeParaJS(h.segunda)}', '${escapeParaJS(h.terca)}', '${escapeParaJS(h.quarta)}', '${escapeParaJS(h.quinta)}', '${escapeParaJS(h.sexta)}')">Editar Horário</button>` : ''; 
-                    container.innerHTML += `<div class="monitor-card"><div class="monitor-card-header"><div><div class="monitor-nome">${escaparHtml(m.nome)}</div><div style="color:var(--text-muted); font-size:14px; margin-top:4px;">${escaparHtml(m.email)}</div></div>${btnEditHTML}</div><div style="margin-bottom:12px;"><strong>Sala:</strong> ${escaparHtml(h.sala)}</div><div class="schedule-table-wrapper"><table class="schedule-table"><thead><tr><th>Seg</th><th>Ter</th><th>Qua</th><th>Qui</th><th>Sex</th></tr></thead><tbody><tr><td>${formatarHorario(escaparHtml(h.segunda))}</td><td>${formatarHorario(escaparHtml(h.terca))}</td><td>${formatarHorario(escaparHtml(h.quarta))}</td><td>${formatarHorario(escaparHtml(h.quinta))}</td><td>${formatarHorario(escaparHtml(h.sexta))}</td></tr></tbody></table></div></div>`; 
-                }); 
+            listaOrdenada.forEach(t => {
+                let card = document.createElement('div');
+                card.className = 'forum-topico-card';
+                let tagFixado = t.fixado === 'sim' ? `<span style="background:var(--primary-gradient); color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; margin-right:8px; font-weight:bold;">FIXADO</span>` : '';
+                card.innerHTML = `<div class="forum-topico-header"><div class="forum-topico-title">${tagFixado}${escaparHtml(t.nome_forum)}</div><div style="font-size:12px; color:var(--text-muted);">${t.data_criacao}</div></div><div class="forum-topico-meta">Por: <strong>${escaparHtml(t.autor_nome)}</strong></div>`;
+                card.onclick = () => { abrirTopicoForum(cacheTopicosForum.indexOf(t)); };
+                container.appendChild(card);
             });
         }
-        function abrirModalEditarHorario(email, sala, seg, ter, qua, qui, sex) { document.getElementById('edit-horario-email').value = email; document.getElementById('edit-sala').value = sala !== '-' ? sala : ''; document.getElementById('edit-segunda').value = seg !== '-' ? seg : ''; document.getElementById('edit-terca').value = ter !== '-' ? ter : ''; document.getElementById('edit-quarta').value = qua !== '-' ? qua : ''; document.getElementById('edit-quinta').value = qui !== '-' ? qui : ''; document.getElementById('edit-sexta').value = sex !== '-' ? sex : ''; document.getElementById('modal-editar-horario').style.display = 'flex'; }
-        document.getElementById('form-editar-horario').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'salvar_horario', email_monitor: document.getElementById('edit-horario-email').value, sala: document.getElementById('edit-sala').value, segunda: document.getElementById('edit-segunda').value, terca: document.getElementById('edit-terca').value, quarta: document.getElementById('edit-quarta').value, quinta: document.getElementById('edit-quinta').value, sexta: document.getElementById('edit-sexta').value }).then(data => { if(data) showToast(data.mensagem); document.getElementById('modal-editar-horario').style.display = 'none'; carregarEExibirMonitores(); }); });
 
-        function prepararTelaAtendimento() { 
-            if (session.classe === 'monitor') { 
-                document.getElementById('view-atendimento-aluno').style.display = 'none'; 
-                document.getElementById('view-atendimento-monitor').style.display = 'block'; 
-                carregarSolicitacoesPendentesMonitor(); 
-            } else if (usuarioEstaImpedidoDe('atendimento') || session.classe === 'visitante') {
-                document.getElementById('view-atendimento-aluno').style.display = 'block';
-                document.getElementById('view-atendimento-monitor').style.display = 'none';
-                document.getElementById('view-atendimento-aluno').innerHTML = `
-                    <h3 style="color:var(--danger-color); margin-bottom:10px;">Acesso Restrito</h3>
-                    <p style="color:var(--text-muted);">Contas de visitante não possuem permissão para solicitar atendimento de monitoria.</p>
-                `;
-            } else { 
-                document.getElementById('view-atendimento-aluno').style.display = 'block'; 
-                document.getElementById('view-atendimento-monitor').style.display = 'none'; 
-                let select = document.getElementById('atendimento-monitor');
-                if(select && select.options.length <= 1) { 
-                    apiFetch({ action: 'listar_monitores' }).then(data => { 
-                        if(data && data.monitores) {
-                            select.innerHTML = '<option value="" disabled selected>Selecione o monitor...</option>'; 
-                            data.monitores.forEach(m => { select.innerHTML += `<option value="${escaparHtml(m.nome)}">${escaparHtml(m.nome)}</option>`; }); 
-                        }
-                    });
+        document.getElementById('busca-forum').addEventListener('input', renderizarTopicosForum);
+
+        document.getElementById('form-add-topico').addEventListener('submit', e => {
+            e.preventDefault();
+            apiFetch({
+                action: 'cadastrar_topico_forum',
+                nome_forum: document.getElementById('topico-titulo').value,
+                texto: document.getElementById('topico-texto').value
+            }).then(data => {
+                if(data) showToast(data.mensagem, data.status !== 'sucesso');
+                if (data && data.status === 'sucesso') {
+                    document.getElementById('modal-topico-forum').style.display = 'none';
+                    document.getElementById('form-add-topico').reset();
+                    carregarTopicosForum(true);
                 }
-            } 
-        }
-
-        function carregarSolicitacoesPendentesMonitor() { 
-            return apiFetch({ action: 'listar_solicitacoes_pendentes', monitor_nome: session.nome }).then(data => { 
-                if(!data) return;
-                const container = document.getElementById('solicitacoes-pendentes-container'); container.innerHTML = ''; 
-                if (data.status === 'erro') { showToast(data.mensagem, true); return; }
-                if (data.solicitacoes && data.solicitacoes.length > 0) { 
-                    data.solicitacoes.reverse().forEach(sol => { 
-                        container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${escaparHtml(sol.nome)} (${escaparHtml(sol.matricula)})</h3><p>Curso: ${escaparHtml(sol.curso)} - Fase: ${escaparHtml(sol.fase)}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="processarSolicitacao('${sol.id}', 'APROVAR')">Aprovar</button><button class="btn-negar" onclick="processarSolicitacao('${sol.id}', 'NEGAR')">Negar</button></div></div>`; 
-                    }); 
-                } else { 
-                    container.innerHTML = '<p style="text-align:center; color:var(--text-muted);">Nenhuma solicitação pendente para você.</p>'; 
-                } 
-            }); 
-        }
-
-        function processarSolicitacao(id, decisao) { apiFetch({ action: 'processar_solicitacao_atendimento', id_solicitacao: id, decisao: decisao }).then(data => { if(data) showToast(data.mensagem); carregarSolicitacoesPendentesMonitor(); }); }
-        
-        document.getElementById('form-registro-atendimento').addEventListener('submit', e => { 
-            e.preventDefault(); let btn = e.target.querySelector('button[type="submit"]'); btn.disabled = true; btn.textContent = 'Solicitando...'; 
-            apiFetch({ action: 'solicitar_atendimento', matricula: session.matricula, nome: session.nome, email: session.email, curso: document.getElementById('atendimento-curso').value, fase_ano: document.getElementById('atendimento-fase-ano').value, monitor_nome: document.getElementById('atendimento-monitor').value })
-            .then(data => { if(data) showToast(data.mensagem); btn.disabled = false; btn.textContent = 'Solicitar Atendimento'; document.getElementById('form-registro-atendimento').reset(); }); 
+            });
         });
 
-        document.getElementById('form-salvar-aviso').addEventListener('submit', e => { e.preventDefault(); let btn = document.getElementById('btn-submit-aviso'); btn.textContent = 'Enviando...'; btn.disabled = true; apiFetch({ action: 'salvar_alerta', aviso: document.getElementById('input-texto-aviso').value }).then(data => { if(data) showToast(data.mensagem); document.getElementById('input-texto-aviso').value = ''; btn.textContent = 'Publicar e Enviar por E-mail'; btn.disabled = false; }).catch(() => { showToast('Houve um erro na requisição.', true); btn.textContent = 'Publicar e Enviar por E-mail'; btn.disabled = false; }); });
-        document.getElementById('form-convidar-visitante').addEventListener('submit', e => { e.preventDefault(); apiFetch({ action: 'convidar_visitante', nome: document.getElementById('convite-nome').value, email: document.getElementById('convite-email').value }).then(data => { if(data) showToast(data.mensagem, data.status !== 'sucesso'); if (data && data.status === 'sucesso') document.getElementById('form-convidar-visitante').reset(); }); });
-        document.getElementById('form-banir-usuario').addEventListener('submit', e => { e.preventDefault(); let matricula = document.getElementById('ban-matricula').value, tipo = document.getElementById('ban-tipo').value; abrirModalConfirmacao(`Confirma o banimento ${tipo.toUpperCase()} da matrícula ${matricula}?`, () => { apiFetch({ action: 'banir_usuario', matricula: matricula, tipo: tipo, motivo: document.getElementById('ban-motivo').value }).then(data => { if(data) showToast(data.mensagem, data.status !== 'sucesso'); if (data && data.status === 'sucesso') { document.getElementById('form-banir-usuario').reset(); carregarBanidos(); } }); }); });
-        
-        function carregarBanidos() { 
-            if (session.classe !== 'monitor') return Promise.resolve(); 
-            return apiFetch({ action: 'listar_banidos' }).then(data => { if(!data) return; const container = document.getElementById('lista-banidos-container'); if (!container) return; container.innerHTML = ''; if (!data.banidos || data.banidos.length === 0) { container.innerHTML = '<p style="color:var(--text-muted);">Nenhum usuário banido.</p>'; return; } data.banidos.forEach(b => { container.innerHTML += `<div class="solicitacao-card"><div class="solicitacao-info"><h3>${escaparHtml(b.matricula)} — ${escaparHtml(b.tipo).toUpperCase()}</h3><p>${escaparHtml(b.motivo) || 'Sem motivo informado.'}${b.tipo === 'corretivo' ? ' • Até ' + escaparHtml(b.data_fim) : ''}</p></div><div class="solicitacao-actions"><button class="btn-aprovar" onclick="desbanirUsuario('${escapeParaJS(b.matricula)}')">Remover Ban</button></div></div>`; }); }); 
+        function abrirTopicoForum(idx) {
+            let t = cacheTopicosForum[idx];
+            currentContext.forum_topico_id = t.id_forum;
+            document.getElementById('view-forum-lista').style.display = 'none';
+            document.getElementById('view-forum-topico').style.display = 'block';
+
+            document.getElementById('detalhe-topico-titulo').textContent = t.nome_forum;
+            document.getElementById('detalhe-topico-texto').innerHTML = processarTextoComLinks(t.texto);
+            
+            let tagFixado = t.fixado === 'sim' ? `<span style="background:var(--primary-gradient); color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; margin-right:8px; font-weight:bold;">FIXADO</span>` : '';
+            document.getElementById('detalhe-topico-meta').innerHTML = `${tagFixado} Criado por: <strong style="color:var(--text-main);">${escaparHtml(t.autor_nome)}</strong> em ${t.data_criacao}`;
+            
+            let acoes = '';
+            if (session.classe === 'monitor' || session.matricula.toString() === t.autor_matricula.toString()) {
+                acoes += `<button class="btn-text-action danger" onclick="deletarTopicoForum(${idx})">Excluir</button>`;
+            }
+            if (session.classe === 'monitor') {
+                let txtFixar = t.fixado === 'sim' ? 'Desfixar' : 'Fixar Tópico';
+                acoes += `<button class="btn-text-action" onclick="alternarFixarTopico(${idx})">${txtFixar}</button>`;
+            }
+            document.getElementById('detalhe-topico-acoes').innerHTML = acoes;
+
+            carregarComentariosForum();
         }
-        function desbanirUsuario(matricula) { abrirModalConfirmacao("Remover o banimento deste usuário?", () => { apiFetch({ action: 'desbanir_usuario', matricula: matricula }).then(data => { if(data) showToast(data.mensagem); carregarBanidos(); }); }); }
-        
-        document.getElementById('form-atualizar-perfil').addEventListener('submit', e => { e.preventDefault(); let novaFoto = document.getElementById('perfil-foto-url').value; apiFetch({ action: 'atualizar_perfil', foto_perfil: novaFoto }).then(data => { if(data) showToast(data.mensagem); session.foto_perfil = novaFoto; localStorage.setItem('monitoria_session', JSON.stringify(session)); document.getElementById('modal-perfil').style.display = 'none'; let avatarHeader = document.getElementById('display-user-avatar'); if (novaFoto) { avatarHeader.src = novaFoto; avatarHeader.style.display = 'block'; } }); });
+
+        function deletarTopicoForum(idx) {
+            let t = cacheTopicosForum[idx];
+            abrirModalConfirmacao("Excluir tópico?", () => {
+                apiFetch({ action: 'deletar_topico_forum', id_forum: t.id_forum }).then(() => {
+                    document.getElementById('view-forum-topico').style.display = 'none';
+                    document.getElementById('view-forum-lista').style.display = 'block';
+                    carregarTopicosForum(true);
+                });
+            });
+        }
+
+        function alternarFixarTopico(idx) {
+            let t = cacheTopicosForum[idx];
+            apiFetch({ action: 'fixar_topico_forum', id_forum: t.id_forum }).then(() => {
+                carregarTopicosForum(true).then(() => {
+                    let novoIdx = cacheTopicosForum.findIndex(x => x.id_forum === t.id_forum);
+                    if(novoIdx !== -1) abrirTopicoForum(novoIdx);
+                });
+            });
+        }
+
+        document.getElementById('btn-voltar-forum').addEventListener('click', () => {
+            document.getElementById('view-forum-topico').style.display = 'none';
+            document.getElementById('view-forum-lista').style.display = 'block';
+            carregarTopicosForum();
+        });
+
+        function carregarComentariosForum() {
+            apiFetch({ action: 'listar_comentarios', modulo: currentContext.forum_topico_id, aula: 'forum' }).then(data => {
+                if(!data) return;
+                const list = document.getElementById('comments-list-forum');
+                list.innerHTML = '';
+                cacheComentariosForum = data.comentarios || [];
+                if (cacheComentariosForum.length === 0) {
+                    list.innerHTML = '<p style="color:var(--text-muted); font-size:13px;">Seja o primeiro a responder.</p>';
+                    return;
+                }
+                cacheComentariosForum.forEach((c, idx) => {
+                    let deleteBtn = (session.classe === 'monitor' || session.matricula.toString() === c.matricula.toString()) ? `<button class="btn-text-action danger" style="padding:2px 6px; font-size:11px;" onclick="deletarComentarioForum(${idx})">Excluir</button>` : '';
+                    let matriculaDisplay = (session.classe === 'monitor') ? ` <span style="font-size:11px; color:var(--text-muted); font-weight:normal;">(${escaparHtml(c.matricula)})</span>` : '';
+                    let avatarHTML = c.foto_perfil ? `<img src="${c.foto_perfil}" style="width:36px; height:36px; border-radius:50%; object-fit:cover; border:1px solid var(--primary-color); flex-shrink:0;">` : `<div style="width:36px; height:36px; border-radius:50%; background:var(--input-bg); color:var(--text-muted); display:flex; align-items:center; justify-content:center; font-weight:bold; border:1px solid var(--input-border); flex-shrink:0; font-size:14px;">${escaparHtml(c.nome).charAt(0).toUpperCase()}</div>`;
+                    let textoProc = processarTextoComLinks(c.comentario);
+                    list.innerHTML += `<div class="comment-item">${avatarHTML}<div class="comment-content"><div class="comment-header"><span class="comment-name">${escaparHtml(c.nome)}${matriculaDisplay}</span>${deleteBtn}</div><div class="comment-text">${textoProc}</div><div style="font-size:11px; color:var(--text-muted); margin-top:8px;">${c.data}</div></div></div>`;
+                });
+            });
+        }
+
+        document.getElementById('form-comentario-forum').addEventListener('submit', e => {
+            e.preventDefault();
+            apiFetch({
+                action: 'adicionar_comentario',
+                comentario: document.getElementById('texto-comentario-forum').value,
+                modulo: currentContext.forum_topico_id,
+                aula: 'forum'
+            }).then(data => {
+                if (data && data.status !== 'sucesso') { showToast(data.mensagem, true); return; }
+                document.getElementById('texto-comentario-forum').value = '';
+                carregarComentariosForum();
+            });
+        });
+
+        function deletarComentarioForum(idx) {
+            let c = cacheComentariosForum[idx];
+            abrirModalConfirmacao("Excluir resposta?", () => {
+                apiFetch({ action: 'deletar_comentario', modulo: currentContext.forum_topico_id, aula: 'forum', comentario: c.comentario }).then(() => carregarComentariosForum());
+            });
+        }
+
+        function carregarEExibirMonitores() {
+            return apiFetch({ action: 'listar_monitores' }).then(data => {
+                if(!data) return;
+                cacheMonitores = data.monitores || [];
+                let container = document.getElementById('monitores-horarios-container');
+                container.innerHTML = '';
+                
+                cacheMonitores.forEach(m => {
+                    let btnEditar = (session.classe === 'monitor') ? `<button class="btn-text-action" onclick="abrirModalEditarHorario('${m.email}', '${m.horarios.sala}', '${m.horarios.segunda}', '${m.horarios.terca}', '${m.horarios.quarta}', '${m.horarios.quinta}', '${m.horarios.sexta}')">Editar Horário</button>` : '';
+                    let avatar = m.foto ? `<img src="${m.foto}" style="width:50px; height:50px; border-radius:50%; object-fit:cover; border:2px solid var(--primary-color);">` : `<div style="width:50px; height:50px; border-radius:50%; background:var(--primary-gradient); color:white; display:flex; align-items:center; justify-content:center; font-size:20px; font-weight:bold;">${escaparHtml(m.nome).charAt(0).toUpperCase()}</div>`;
+                    
+                    container.innerHTML += `
+                    <div class="monitor-card">
+                        <div class="monitor-card-header">
+                            <div style="display:flex; align-items:center; gap:15px;">
+                                ${avatar}
+                                <div><div class="monitor-nome">${escaparHtml(m.nome)}</div><div style="font-size:13px; color:var(--text-muted);">${escaparHtml(m.email)}</div></div>
+                            </div>
+                            ${btnEditar}
+                        </div>
+                        <div style="margin-bottom:15px; font-size:14px;"><strong style="color:var(--primary-color);">Sala:</strong> ${escaparHtml(m.horarios.sala)}</div>
+                        <div class="schedule-table-wrapper">
+                            <table class="schedule-table">
+                                <thead><tr><th>Segunda</th><th>Terça</th><th>Quarta</th><th>Quinta</th><th>Sexta</th></tr></thead>
+                                <tbody><tr><td>${formatarHorario(m.horarios.segunda)}</td><td>${formatarHorario(m.horarios.terca)}</td><td>${formatarHorario(m.horarios.quarta)}</td><td>${formatarHorario(m.horarios.quinta)}</td><td>${formatarHorario(m.horarios.sexta)}</td></tr></tbody>
+                            </table>
+                        </div>
+                    </div>`;
+                });
+            });
+        }
+
+        function abrirModalEditarHorario(email, sala, seg, ter, qua, qui, sex) {
+            document.getElementById('edit-horario-email').value = email;
+            document.getElementById('edit-sala').value = sala;
+            document.getElementById('edit-segunda').value = seg;
+            document.getElementById('edit-terca').value = ter;
+            document.getElementById('edit-quarta').value = qua;
+            document.getElementById('edit-quinta').value = qui;
+            document.getElementById('edit-sexta').value = sex;
+            document.getElementById('modal-editar-horario').style.display = 'flex';
+        }
+
+        document.getElementById('form-editar-horario').addEventListener('submit', e => {
+            e.preventDefault();
+            apiFetch({
+                action: 'salvar_horario',
+                email_monitor: document.getElementById('edit-horario-email').value,
+                sala: document.getElementById('edit-sala').value,
+                segunda: document.getElementById('edit-segunda').value,
+                terca: document.getElementById('edit-terca').value,
+                quarta: document.getElementById('edit-quarta').value,
+                quinta: document.getElementById('edit-quinta').value,
+                sexta: document.getElementById('edit-sexta').value
+            }).then(() => {
+                document.getElementById('modal-editar-horario').style.display = 'none';
+                carregarEExibirMonitores();
+            });
+        });
+
+        function prepararTelaAtendimento() {
+            if (session.classe === 'monitor') {
+                document.getElementById('view-atendimento-aluno').style.display = 'none';
+                document.getElementById('view-atendimento-monitor').style.display = 'block';
+                document.getElementById('titulo-secao-atendimento').textContent = 'Solicitações de Atendimento (Presencial)';
+                carregarSolicitacoesPendentesMonitor();
+            } else {
+                document.getElementById('view-atendimento-aluno').style.display = 'block';
+                document.getElementById('view-atendimento-monitor').style.display = 'none';
+                document.getElementById('titulo-secao-atendimento').textContent = 'Registrar Atendimento';
+            }
+        }
+
+        document.getElementById('form-registro-atendimento').addEventListener('submit', e => {
+            e.preventDefault();
+            let btn = e.target.querySelector('button');
+            btn.disabled = true;
+            apiFetch({
+                action: 'solicitar_atendimento',
+                matricula: session.matricula,
+                nome: session.nome,
+                email: session.email,
+                curso: document.getElementById('atendimento-curso').value,
+                fase_ano: document.getElementById('atendimento-fase-ano').value,
+                monitor_nome: document.getElementById('atendimento-monitor').value
+            }).then(data => {
+                if(data) showToast(data.mensagem, data.status !== 'sucesso');
+                if(data && data.status === 'sucesso') document.getElementById('form-registro-atendimento').reset();
+            }).finally(() => { btn.disabled = false; });
+        });
+
+        function carregarSolicitacoesPendentesMonitor() {
+            apiFetch({ action: 'listar_solicitacoes_pendentes' }).then(data => {
+                if(!data) return;
+                let c = document.getElementById('solicitacoes-pendentes-container');
+                c.innerHTML = '';
+                if (!data.solicitacoes || data.solicitacoes.length === 0) {
+                    c.innerHTML = '<p style="color:var(--text-muted);">Nenhuma solicitação pendente.</p>';
+                    return;
+                }
+                data.solicitacoes.forEach(s => {
+                    c.innerHTML += `
+                    <div class="solicitacao-card">
+                        <div class="solicitacao-info">
+                            <h3>${escaparHtml(s.nome)} - ${escaparHtml(s.matricula)}</h3>
+                            <p><strong>Curso:</strong> ${escaparHtml(s.curso)} | <strong>Fase/Ano:</strong> ${escaparHtml(s.fase)}</p>
+                            <p><strong>Monitor Solicitado:</strong> ${escaparHtml(s.monitor)}</p>
+                        </div>
+                        <div class="solicitacao-actions">
+                            <button class="btn-aprovar" onclick="processarSolicitacao('${s.id}', 'APROVAR')">Aprovar Atendimento</button>
+                            <button class="btn-negar" onclick="processarSolicitacao('${s.id}', 'RECUSAR')">Estudante Não Compareceu</button>
+                        </div>
+                    </div>`;
+                });
+            });
+        }
+
+        function processarSolicitacao(id, decisao) {
+            abrirModalConfirmacao(`Deseja realmente ${decisao === 'APROVAR' ? 'aprovar' : 'negar'} este atendimento?`, () => {
+                apiFetch({ action: 'processar_solicitacao_atendimento', id_solicitacao: id, decisao: decisao }).then(data => {
+                    if(data) showToast(data.mensagem, data.status !== 'sucesso');
+                    carregarSolicitacoesPendentesMonitor();
+                });
+            });
+        }
+
+        document.getElementById('form-atualizar-perfil').addEventListener('submit', e => {
+            e.preventDefault();
+            let url = document.getElementById('perfil-foto-url').value;
+            apiFetch({ action: 'atualizar_perfil', foto_perfil: url }).then(() => {
+                session.foto_perfil = url;
+                localStorage.setItem('monitoria_session', JSON.stringify(session));
+                document.getElementById('display-user-avatar').src = url;
+                document.getElementById('display-user-avatar').style.display = 'block';
+                document.getElementById('modal-perfil').style.display = 'none';
+                showToast("Foto atualizada com sucesso!");
+            });
+        });
+
+        document.getElementById('form-alt-senha').addEventListener('submit', e => {
+            e.preventDefault();
+            let passAtual = document.getElementById('pass-atual').value;
+            let passNova = document.getElementById('pass-nova').value;
+            let passConfirma = document.getElementById('pass-confirma').value;
+            if (passNova !== passConfirma) { showToast("As senhas novas não coincidem.", true); return; }
+            apiFetch({ action: 'alterar_senha', senha_atual: passAtual, nova_senha: passNova }).then(data => {
+                if (data && data.status === 'sucesso') {
+                    showToast(data.mensagem);
+                    document.getElementById('modal-senha').style.display = 'none';
+                    session.senha_alterada = 'sim';
+                    localStorage.setItem('monitoria_session', JSON.stringify(session));
+                    document.getElementById('btn-abrir-modal-senha').style.display = 'none';
+                    document.getElementById('btn-abrir-modal-perfil').style.display = 'inline-block';
+                    checarNotificacoes();
+                } else if(data) {
+                    showToast(data.mensagem, true);
+                }
+            });
+        });
+
+        document.getElementById('form-salvar-aviso').addEventListener('submit', e => {
+            e.preventDefault();
+            let btn = document.getElementById('btn-submit-aviso'); btn.disabled = true; btn.textContent = 'Enviando...';
+            apiFetch({ action: 'salvar_alerta', aviso: document.getElementById('input-texto-aviso').value }).then(data => {
+                if(data) showToast(data.mensagem, data.status !== 'sucesso');
+                if (data && data.status === 'sucesso') document.getElementById('input-texto-aviso').value = '';
+            }).finally(() => { btn.disabled = false; btn.textContent = 'Publicar e Enviar por E-mail'; });
+        });
+
+        document.getElementById('form-convidar-visitante').addEventListener('submit', e => {
+            e.preventDefault();
+            let btn = e.target.querySelector('button'); btn.disabled = true;
+            apiFetch({ action: 'convidar_visitante', email: document.getElementById('convite-email').value, nome: document.getElementById('convite-nome').value }).then(data => {
+                if(data) showToast(data.mensagem, data.status !== 'sucesso');
+                if (data && data.status === 'sucesso') document.getElementById('form-convidar-visitante').reset();
+            }).finally(() => { btn.disabled = false; });
+        });
+
+        document.getElementById('form-banir-usuario').addEventListener('submit', e => {
+            e.preventDefault();
+            apiFetch({
+                action: 'banir_usuario',
+                matricula: document.getElementById('ban-matricula').value,
+                tipo: document.getElementById('ban-tipo').value,
+                motivo: document.getElementById('ban-motivo').value
+            }).then(data => {
+                if(data) showToast(data.mensagem, data.status !== 'sucesso');
+                document.getElementById('form-banir-usuario').reset();
+                carregarBanidos();
+            });
+        });
+
+        function carregarBanidos() {
+            if (session.classe !== 'monitor') return;
+            apiFetch({ action: 'listar_banidos' }).then(data => {
+                if(!data) return;
+                let c = document.getElementById('lista-banidos-container'); c.innerHTML = '';
+                if (!data.banidos || data.banidos.length === 0) {
+                    c.innerHTML = '<p style="color:var(--text-muted);">Nenhum usuário banido.</p>'; return;
+                }
+                data.banidos.forEach(b => {
+                    let tipoColor = b.tipo === 'emergencial' ? 'var(--danger-color)' : (b.tipo === 'corretivo' ? '#f59e0b' : 'var(--primary-color)');
+                    c.innerHTML += `<div class="solicitacao-card" style="align-items:center;">
+                        <div>
+                            <div style="font-weight:700; margin-bottom:5px;">${escaparHtml(b.matricula)} <span style="background:${tipoColor}; color:#fff; padding:2px 8px; border-radius:10px; font-size:11px; margin-left:10px;">${b.tipo.toUpperCase()}</span></div>
+                            <div style="font-size:12px; color:var(--text-muted);">Motivo: ${escaparHtml(b.motivo)}</div>
+                            <div style="font-size:12px; color:var(--text-muted);">Fim: ${b.data_fim}</div>
+                        </div>
+                        <button class="btn-text-action" onclick="desbanirUsuario('${b.matricula}')">Remover Banimento</button>
+                    </div>`;
+                });
+            });
+        }
+
+        function desbanirUsuario(matricula) {
+            abrirModalConfirmacao("Remover o banimento deste usuário?", () => {
+                apiFetch({ action: 'desbanir_usuario', matricula: matricula }).then(() => carregarBanidos());
+            });
+        }
+
     </script>
 </body>
 </html>
