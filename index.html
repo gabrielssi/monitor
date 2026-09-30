@@ -283,6 +283,17 @@
                 <button type="button" class="btn-text-action" style="width: 100%; border: none; font-size: 14px;" onclick="fecharPresencialEIrParaLogin()">Não, obrigado</button>
             </form>
         </div>
+
+        <!-- PASSO 3: AVISO DE CONTA CRIADA COM SUCESSO -->
+        <div class="mobile-presencial-card" id="step-3-sucesso" style="display: none; text-align: center;">
+            <div class="aula-card-play-icon" style="width: 60px; height: 60px; margin: 0 auto 20px auto; font-size: 28px; background: var(--primary-gradient);">📧</div>
+            <h2 style="margin-bottom: 12px; font-size: 22px; color: var(--primary-color);">Verifique seu E-mail!</h2>
+            <p style="color: var(--text-main); font-weight: 600; margin-bottom: 12px; font-size: 15px;">Sua conta foi criada com sucesso!</p>
+            <p style="color: var(--text-muted); margin-bottom: 25px; line-height: 1.6; font-size: 14px;">
+                Enviamos uma mensagem para seu e-mail cadastrado contendo suas informações de acesso. Por favor, <strong>confira sua caixa de entrada e pasta de spam</strong> para realizar seu primeiro login.
+            </p>
+            <button type="button" class="btn-submit" onclick="fecharPresencialEIrParaLogin()">Ir para a Tela de Login</button>
+        </div>
     </div>
 
     <!-- AUTH SECTION -->
@@ -837,7 +848,7 @@
                         listContent.innerHTML = '';
                         
                         if (precisaAlterarSenha) {
-                            listContent.innerHTML += `<div class="notification-item" style="cursor:pointer; border-left: 3px solid var(--danger-color); background-color: rgba(239, 68, 68, 0.1);" onclick="document.getElementById('btn-abrir-modal-senha').click(); document.getElementById('notification-dropdown').style.display='none';">⚠️ Aviso de Segurança<span>Você ainda está usando a senha padrão. Clique aqui para definir uma nova senha.</span></div>`;
+                            listContent.innerHTML += `<div class="notification-item" style="cursor:pointer; border-left: 3px solid var(--danger-color); background-color: rgba(239, 68, 68, 0.1);" onclick="document.getElementById('btn-abrir-modal-senha').click(); document.getElementById('notification-dropdown').style.display='none';">⚠️️ Aviso de Segurança<span>Você ainda está usando a senha padrão. Clique aqui para definir uma nova senha.</span></div>`;
                         }
 
                         data.notificacoes.forEach((n, idx) => { 
@@ -937,6 +948,9 @@
 
         function abrirTelaPresencialMobile() {
             document.getElementById('mobile-presencial-overlay').style.display = 'flex';
+            document.getElementById('step-1-presenca').style.display = 'block';
+            document.getElementById('step-2-cadastro').style.display = 'none';
+            document.getElementById('step-3-sucesso').style.display = 'none';
             
             let select = document.getElementById('presencial-monitor');
             if (select && select.options.length > 1) {
@@ -951,7 +965,12 @@
             });
         }
         
-        function fecharPresencialEIrParaLogin() { document.getElementById('mobile-presencial-overlay').style.display = 'none'; }
+        function fecharPresencialEIrParaLogin() { 
+            document.getElementById('mobile-presencial-overlay').style.display = 'none'; 
+            document.getElementById('step-1-presenca').style.display = 'block';
+            document.getElementById('step-2-cadastro').style.display = 'none';
+            document.getElementById('step-3-sucesso').style.display = 'none';
+        }
 
         document.getElementById('form-presencial').addEventListener('submit', e => {
             e.preventDefault();
@@ -965,7 +984,8 @@
                 if(data) showToast(data.mensagem); 
                 btn.disabled = false; btn.textContent = 'Confirmar Presença';
                 if(data && data.status === 'sucesso') {
-                    document.getElementById('step-1-presenca').style.display = 'none'; document.getElementById('step-2-cadastro').style.display = 'block';
+                    document.getElementById('step-1-presenca').style.display = 'none'; 
+                    document.getElementById('step-2-cadastro').style.display = 'block';
                 }
             });
         });
@@ -978,15 +998,12 @@
             apiFetch({ action: 'cadastro', matricula: infoPresencialSalva.matricula, nome: infoPresencialSalva.nome, email: emailAluno }).then(data => {
                 btn.disabled = false; btn.textContent = 'Criar Minha Conta';
                 if (data && data.status === 'sucesso') {
-                    showToast("Conta criada! Você já será conectado.");
-                    apiFetch({ action: 'login', email: emailAluno, senha: infoPresencialSalva.matricula }).then(dataLogin => {
-                        if (dataLogin && dataLogin.status === 'sucesso') {
-                            session = { token: dataLogin.token, nome: dataLogin.nome, matricula: dataLogin.matricula, email: dataLogin.email, classe: dataLogin.classe, senha_alterada: dataLogin.senha_alterada || 'nao', foto_perfil: dataLogin.foto_perfil || '', boas_vindas: dataLogin.boas_vindas || 'nao', banimento: dataLogin.banimento || null };
-                            localStorage.setItem('monitoria_session', JSON.stringify(session));
-                            document.getElementById('mobile-presencial-overlay').style.display = 'none'; ativarPainel();
-                        }
-                    });
-                } else if(data) { showToast(data.mensagem, true); }
+                    // Exibir a tela de aviso para conferir o e-mail
+                    document.getElementById('step-2-cadastro').style.display = 'none';
+                    document.getElementById('step-3-sucesso').style.display = 'block';
+                } else if(data) { 
+                    showToast(data.mensagem, true); 
+                }
             });
         });
 
@@ -1784,7 +1801,7 @@
             let topicos = termoBusca ? cacheTopicosForum.filter(t => t.nome_forum.toLowerCase().includes(termoBusca)) : cacheTopicosForum;
 
             if (topicos.length === 0) {
-                container.innerHTML = '<p style="color:var(--text-muted);">Nenhum tópico encontrado.</p>';
+                container.innerHTML = '<p style="color:var(--text-muted);">Nenum tópico encontrado.</p>';
                 return;
             }
 
