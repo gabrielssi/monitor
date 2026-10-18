@@ -304,10 +304,10 @@
             </div>
             
             <div class="form-area">
-                <div class="header"><h1>Monitoria de Informática</h1><p id="header-text">Faça login com seu e-mail institucional</p></div>
+                <div class="header"><h1>Monitoria de Informática</h1><p id="header-text">Acesse com seu e-mail institucional ou usuário</p></div>
                 <form id="form-login">
                     <input type="hidden" name="action" value="login">
-                    <div class="form-group"><label>E-mail de Acesso</label><input type="email" name="email" required placeholder="Seu e-mail cadastrado"></div>
+                    <div class="form-group"><label>E-mail ou usuário</label><input type="text" name="email" required autocomplete="username" autocapitalize="none" spellcheck="false" placeholder="Seu e-mail ou usuário (ex.: teste)"></div>
                     <div class="form-group">
                         <label>Senha</label>
                         <div class="password-wrapper">
@@ -1057,13 +1057,15 @@
             });
         });
 
-        document.getElementById('btn-tab-login').addEventListener('click', () => { document.getElementById('btn-tab-login').classList.add('active'); document.getElementById('btn-tab-cadastro').classList.remove('active'); document.getElementById('form-login').style.display = 'block'; document.getElementById('form-cadastro').style.display = 'none'; document.getElementById('header-text').textContent = 'Faça login com seu e-mail institucional'; });
+        document.getElementById('btn-tab-login').addEventListener('click', () => { document.getElementById('btn-tab-login').classList.add('active'); document.getElementById('btn-tab-cadastro').classList.remove('active'); document.getElementById('form-login').style.display = 'block'; document.getElementById('form-cadastro').style.display = 'none'; document.getElementById('header-text').textContent = 'Acesse com seu e-mail institucional ou usuário'; });
         document.getElementById('btn-tab-cadastro').addEventListener('click', () => { document.getElementById('btn-tab-cadastro').classList.add('active'); document.getElementById('btn-tab-login').classList.remove('active'); document.getElementById('form-cadastro').style.display = 'block'; document.getElementById('form-login').style.display = 'none'; document.getElementById('header-text').textContent = 'Crie sua conta de estudante'; });
 
         document.getElementById('form-login').addEventListener('submit', e => {
             e.preventDefault();
             let btn = document.getElementById('btn-submit-login'); btn.disabled = true; btn.textContent = 'Verificando...';
-            apiFetch({ action: 'login', email: document.getElementById('form-login').email.value, senha: document.getElementById('form-login').senha.value }).then(data => {
+            let identificador = document.getElementById('form-login').email.value.trim();
+            let email = identificador.includes('@') ? identificador : `${identificador}@aluno.ifsc.edu.br`;
+            apiFetch({ action: 'login', email: email, senha: document.getElementById('form-login').senha.value }).then(data => {
                 if (data && data.status === 'sucesso') {
                     session = { token: data.token, nome: data.nome, matricula: data.matricula, email: data.email, classe: data.classe, senha_alterada: data.senha_alterada || 'nao', foto_perfil: data.foto_perfil || '', boas_vindas: data.boas_vindas || 'nao', banimento: data.banimento || null };
                     localStorage.setItem('monitoria_session', JSON.stringify(session));
